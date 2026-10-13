@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
         kategori: item.kategori || '',
         label: item.label || '',
         tipe_input: item.tipe_input || 'binary',
+        opsi_jawaban: item.opsi_jawaban || item.condition_options || [],
         nilai_gagal: item.nilai_gagal || '',
         auto_reject_on_fail: item.auto_reject_on_fail ?? false,
         requires_media_on_fail: item.requires_media_on_fail ?? false,

@@ -1,36 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SISKARA Web Admin
 
-## Getting Started
+Portal internal SISKARA untuk administrator BBKK Makassar. Aplikasi web
+dimulai langsung dari halaman login; tidak ada landing page publik. Halaman
+utama yang tersedia saat ini:
 
-First, run the development server:
+- `/login` — autentikasi Firebase untuk akun dengan custom claim
+  `role: "validator_admin"`.
+- `/dashboard` — ringkasan pengajuan, statistik, pencarian, filter, dan ekspor
+  CSV dari pengajuan yang sedang ditampilkan. Dashboard bersifat read-only
+  untuk keputusan verifikasi.
+- `/` — mengarahkan pengguna ke `/login`.
+
+## Menjalankan aplikasi
+
+Siapkan nilai konfigurasi Firebase server dan browser pada `.env.local`
+berdasarkan `.env.example`, lalu jalankan:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Route `/dashboard` memerlukan cookie sesi yang dibuat setelah login Admin
+berhasil. API data tetap memverifikasi Firebase ID token dan role pengguna.
+Pengguna dengan role selain `validator_admin` tidak dapat masuk ke portal Admin.

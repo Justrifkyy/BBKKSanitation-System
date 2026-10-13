@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase-admin';
 import { COLLECTIONS, SUBMISSION_STATUS, DOCUMENT_TYPE, TRANSPORT_MODE } from '@/lib/constants';
+import { isValidPin, verifyUserPin } from '@/lib/pin';
 
 /**
  * POST /api/submissions/[id]/verify
@@ -21,12 +22,39 @@ export async function POST(
 
   const { user } = authResult;
   const body = await request.json();
-  const { decision, catatan } = body; // decision: 'approve' | 'reject'
+  const { decision, catatan, pin } = body; // decision: 'approve' | 'reject'
 
   if (!['approve', 'reject'].includes(decision)) {
     return NextResponse.json(
       { error: 'Decision must be "approve" or "reject"' },
       { status: 400 }
+    );
+  }
+
+  if (!isValidPin(pin)) {
+    return NextResponse.json(
+      { error: 'PIN harus terdiri dari 6 angka.' },
+      { status: 400 }
+    );
+  }
+
+  const pinCheck = await verifyUserPin(user.uid, pin);
+  if (!pinCheck.valid) {
+    return NextResponse.json(
+      {
+        error: pinCheck.locked
+          ? 'PIN dikunci selama 15 menit setelah 5 percobaan yang salah.'
+          : 'PIN tidak sesuai.',
+      },
+      { status: pinCheck.locked ? 429 : 403 }
+    );
+  }
+
+  const verifierProfile = await adminDb.collection(COLLECTIONS.USERS).doc(user.uid).get();
+  if (!verifierProfile.data()?.signature_url) {
+    return NextResponse.json(
+      { error: 'Tanda tangan digital belum disiapkan.' },
+      { status: 409 }
     );
   }
 
@@ -41,6 +69,10 @@ export async function POST(
   }
 
   const submission = subDoc.data()!;
+  const submissionRef = adminDb.collection(COLLECTIONS.SUBMISSIONS).doc(submissionId);
+  const signatureRef = adminDb
+    .collection(COLLECTIONS.DOCUMENT_SIGNATURES)
+    .doc(`${submissionId}_verifier`);
 
   // Must be in pending review status
   if (submission.status !== SUBMISSION_STATUS.PENDING_REVIEW) {
@@ -51,16 +83,24 @@ export async function POST(
   }
 
   if (decision === 'reject') {
-    // Reject the submission
-    await adminDb
-      .collection(COLLECTIONS.SUBMISSIONS)
-      .doc(submissionId)
-      .update({
+    await adminDb.runTransaction(async (transaction) => {
+      const current = await transaction.get(submissionRef);
+      if (current.data()?.status !== SUBMISSION_STATUS.PENDING_REVIEW) {
+        throw new Error('Pengajuan sudah diverifikasi oleh petugas lain.');
+      }
+      transaction.update(submissionRef, {
         status: SUBMISSION_STATUS.REJECTED_BY_STAFF,
         verifikator_id: user.uid,
         catatan_verifikator: catatan || null,
         updated_at: new Date(),
       });
+      transaction.create(signatureRef, {
+        submission_id: submissionId,
+        user_id: user.uid,
+        role_saat_ttd: 'verifikator',
+        waktu_ttd: new Date(),
+      });
+    });
 
     // Audit log
     await adminDb.collection(COLLECTIONS.AUDIT_LOG).add({
@@ -85,21 +125,22 @@ export async function POST(
       : DOCUMENT_TYPE.BERKAS_VERIFIKASI;
 
   // Update submission to final
-  await adminDb
-    .collection(COLLECTIONS.SUBMISSIONS)
-    .doc(submissionId)
-    .update({
+  await adminDb.runTransaction(async (transaction) => {
+    const current = await transaction.get(submissionRef);
+    if (current.data()?.status !== SUBMISSION_STATUS.PENDING_REVIEW) {
+      throw new Error('Pengajuan sudah diverifikasi oleh petugas lain.');
+    }
+    transaction.update(submissionRef, {
       status: SUBMISSION_STATUS.FINAL,
       verifikator_id: user.uid,
       updated_at: new Date(),
     });
-
-  // Record verifier's digital signature
-  await adminDb.collection(COLLECTIONS.DOCUMENT_SIGNATURES).add({
-    submission_id: submissionId,
-    user_id: user.uid,
-    role_saat_ttd: 'verifikator',
-    waktu_ttd: new Date(),
+    transaction.create(signatureRef, {
+      submission_id: submissionId,
+      user_id: user.uid,
+      role_saat_ttd: 'verifikator',
+      waktu_ttd: new Date(),
+    });
   });
 
   // Create dokumen_hasil record (PDF generation is a separate step)

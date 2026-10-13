@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { adminDb } from '@/lib/firebase-admin';
-import { COLLECTIONS, SUBMISSION_STATUS } from '@/lib/constants';
+import { COLLECTIONS } from '@/lib/constants';
+import {
+  evaluateSubmissionAnswers,
+  SubmissionValidationError,
+} from '@/lib/submission-evaluation';
 
 /**
  * POST /api/submissions/[id]/evaluate
@@ -37,40 +41,47 @@ export async function POST(
     return NextResponse.json({ error: 'Not your submission' }, { status: 403 });
   }
 
-  // Fetch answers
-  const answersSnapshot = await adminDb
-    .collection(COLLECTIONS.SUBMISSIONS)
-    .doc(submissionId)
-    .collection(COLLECTIONS.SUBMISSION_ANSWERS)
+  const declarantSignature = await adminDb
+    .collection(COLLECTIONS.DOCUMENT_SIGNATURES)
+    .doc(`${submissionId}_declarant`)
     .get();
+  if (!declarantSignature.exists) {
+    return NextResponse.json(
+      { error: 'Deklarasi harus ditandatangani dan dikonfirmasi dengan PIN.' },
+      { status: 409 }
+    );
+  }
 
-  // Check if any answer has status_gagal = true
-  const hasFailure = answersSnapshot.docs.some((doc) => doc.data().status_gagal === true);
-
-  const newStatus = hasFailure
-    ? SUBMISSION_STATUS.AUTO_REJECTED
-    : SUBMISSION_STATUS.PENDING_REVIEW;
+  const submissionRef = adminDb
+    .collection(COLLECTIONS.SUBMISSIONS)
+    .doc(submissionId);
+  let evaluation: Awaited<ReturnType<typeof evaluateSubmissionAnswers>>;
+  try {
+    evaluation = await evaluateSubmissionAnswers(submissionRef);
+  } catch (error) {
+    if (error instanceof SubmissionValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
 
   // Update submission status
-  await adminDb
-    .collection(COLLECTIONS.SUBMISSIONS)
-    .doc(submissionId)
-    .update({
-      status: newStatus,
+  await submissionRef.update({
+      status: evaluation.status,
       updated_at: new Date(),
     });
 
   // Audit log
   await adminDb.collection(COLLECTIONS.AUDIT_LOG).add({
     user_id: user.uid,
-    aksi: hasFailure ? 'auto_reject' : 'pass_to_review',
+    aksi: evaluation.hasAutoReject ? 'auto_reject' : 'pass_to_review',
     entitas_terkait: `submissions/${submissionId}`,
     waktu: new Date(),
   });
 
   return NextResponse.json({
     submission_id: submissionId,
-    status: newStatus,
-    has_failure: hasFailure,
+    status: evaluation.status,
+    has_failure: evaluation.hasAutoReject,
   });
 }

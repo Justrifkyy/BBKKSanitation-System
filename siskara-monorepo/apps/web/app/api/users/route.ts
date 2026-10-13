@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       phone,
       id_number: id_number || null,
       signature_url: null,
-      pin_hash: null,
+      has_pin: false,
       dibuat_oleh: admin.uid,
       created_at: new Date(),
     });
