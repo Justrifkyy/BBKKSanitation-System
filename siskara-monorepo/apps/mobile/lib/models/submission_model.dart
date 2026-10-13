@@ -1,14 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Submission model matching the Firestore `submissions` collection schema.
 class SubmissionModel {
-  final String id;
-  final String modaTransportasi;
-  final String templateId;
-  final Map<String, dynamic> dataUmum;
-  final String pengisiId;
-  final String? verifikatorId;
-  final String status;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   const SubmissionModel({
     required this.id,
@@ -35,6 +28,15 @@ class SubmissionModel {
       updatedAt: (map['updated_at'] as dynamic)?.toDate() ?? DateTime.now(),
     );
   }
+  final String id;
+  final String modaTransportasi;
+  final String templateId;
+  final Map<String, dynamic> dataUmum;
+  final String pengisiId;
+  final String? verifikatorId;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   Map<String, dynamic> toMap() {
     return {
@@ -81,12 +83,6 @@ class SubmissionModel {
 
 /// Answer for a single checklist item within a submission.
 class SubmissionAnswerModel {
-  final String id;
-  final String submissionId;
-  final String templateItemId;
-  final String nilaiJawaban;
-  final String? alasan;
-  final bool statusGagal;
 
   const SubmissionAnswerModel({
     required this.id,
@@ -107,6 +103,12 @@ class SubmissionAnswerModel {
       statusGagal: map['status_gagal'] ?? false,
     );
   }
+  final String id;
+  final String submissionId;
+  final String templateItemId;
+  final String nilaiJawaban;
+  final String? alasan;
+  final bool statusGagal;
 
   Map<String, dynamic> toMap() {
     return {
@@ -121,13 +123,6 @@ class SubmissionAnswerModel {
 
 /// Media evidence attached to a submission answer.
 class SubmissionAnswerMediaModel {
-  final String id;
-  final String answerId;
-  final String tipe; // 'foto' | 'video'
-  final String fileUrl;
-  final double? latitude;
-  final double? longitude;
-  final DateTime timestamp;
 
   const SubmissionAnswerMediaModel({
     required this.id,
@@ -141,16 +136,32 @@ class SubmissionAnswerMediaModel {
 
   factory SubmissionAnswerMediaModel.fromMap(
       Map<String, dynamic> map, String docId) {
+    final gps = map['gps'];
     return SubmissionAnswerMediaModel(
       id: docId,
       answerId: map['answer_id'] ?? '',
       tipe: map['tipe'] ?? 'foto',
       fileUrl: map['file_url'] ?? '',
-      latitude: map['gps']?.latitude,
-      longitude: map['gps']?.longitude,
+      latitude: gps is GeoPoint
+          ? gps.latitude
+          : gps is Map
+              ? (gps['latitude'] as num?)?.toDouble()
+              : null,
+      longitude: gps is GeoPoint
+          ? gps.longitude
+          : gps is Map
+              ? (gps['longitude'] as num?)?.toDouble()
+              : null,
       timestamp: (map['timestamp'] as dynamic)?.toDate() ?? DateTime.now(),
     );
   }
+  final String id;
+  final String answerId;
+  final String tipe; // 'foto' | 'video'
+  final String fileUrl;
+  final double? latitude;
+  final double? longitude;
+  final DateTime timestamp;
 
   Map<String, dynamic> toMap() {
     return {
@@ -158,7 +169,7 @@ class SubmissionAnswerMediaModel {
       'tipe': tipe,
       'file_url': fileUrl,
       'gps': (latitude != null && longitude != null)
-          ? {'latitude': latitude, 'longitude': longitude}
+          ? GeoPoint(latitude!, longitude!)
           : null,
       'timestamp': timestamp,
     };

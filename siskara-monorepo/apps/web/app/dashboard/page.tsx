@@ -1,13 +1,9 @@
 "use client";
 
-import {
-  onAuthStateChanged,
-  signOut,
-  type User,
-} from "firebase/auth";
+import type { User } from "firebase/auth";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
+import { AdminShell, useAdmin } from "./admin-shell";
+import { adminFetch } from "@/lib/admin-api";
 
 type TransportMode = "kapal" | "pesawat";
 type SubmissionStatus =
@@ -155,26 +151,6 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   );
 }
 
-function BrandMark() {
-  return (
-    <span className="brand-mark brand-mark--sidebar" aria-hidden="true">
-      <svg viewBox="0 0 32 32" fill="none">
-        <path
-          d="M16 3.5 25 7v7.2c0 6.1-3.7 11.3-9 14.3-5.3-3-9-8.2-9-14.3V7l9-3.5Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <path
-          d="M10.5 16.2h11M16 10.7v11M12 12l8 8m0-8-8 8"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
-  );
-}
-
 function getErrorMessage(value: unknown) {
   if (typeof value === "object" && value !== null && "error" in value) {
     const error = value.error;
@@ -307,13 +283,19 @@ function TrendChart({
   );
 }
 
-export default function DashboardPage() {
-  const router = useRouter();
+async function fetchSubmissions(user: User): Promise<Submission[]> {
+  const result = await adminFetch<{ submissions?: unknown }>(user, "/api/submissions");
+  if (!Array.isArray(result.submissions)) {
+    throw new Error("Respons daftar pengajuan tidak memiliki format yang benar.");
+  }
+  return result.submissions as Submission[];
+}
+
+function DashboardContent() {
+  const { user, name: adminName } = useAdmin();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [adminName, setAdminName] = useState("Admin");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const [today, setToday] = useState<Date | null>(null);
   const [pageError, setPageError] = useState("");
   const [search, setSearch] = useState("");
@@ -341,31 +323,28 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.replace("/login");
-        return;
-      }
-
-      try {
-        const tokenResult = await user.getIdTokenResult();
-        if (tokenResult.claims.role !== "validator_admin") {
-          await signOut(auth);
-          router.replace("/login");
-          return;
+    let active = true;
+    void fetchSubmissions(user)
+      .then((items) => {
+        if (!active) return;
+        setSubmissions(items);
+        setToday(new Date());
+        setPageError("");
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setPageError(
+            error instanceof Error ? error.message : "Terjadi kesalahan saat memuat dashboard.",
+          );
         }
-
-        setAdminName(user.displayName?.trim() || user.email?.split("@")[0] || "Admin");
-        await loadSubmissions(user);
-      } catch (error) {
-        setPageError(
-          error instanceof Error ? error.message : "Terjadi kesalahan saat memuat dashboard.",
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    });
-  }, [loadSubmissions, router]);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   const visibleSubmissions = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("id-ID");
@@ -420,11 +399,6 @@ export default function DashboardPage() {
   }).length;
 
   async function handleRefresh() {
-    const user = auth.currentUser;
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
     setIsRefreshing(true);
     try {
       await loadSubmissions(user);
@@ -434,21 +408,6 @@ export default function DashboardPage() {
       );
     } finally {
       setIsRefreshing(false);
-    }
-  }
-
-  async function handleSignOut() {
-    setPageError("");
-    setIsSigningOut(true);
-    try {
-      const response = await fetch("/api/auth/session", { method: "DELETE" });
-      if (!response.ok) throw new Error("Sesi server gagal diakhiri. Silakan coba lagi.");
-      await signOut(auth);
-      router.replace("/login");
-      router.refresh();
-    } catch (error) {
-      setPageError(error instanceof Error ? error.message : "Gagal keluar dari akun.");
-      setIsSigningOut(false);
     }
   }
 
@@ -481,103 +440,8 @@ export default function DashboardPage() {
   const greetingName = adminName.split(/\s+/)[0];
 
   return (
-    <main className="dashboard-shell">
-      <aside className="dashboard-sidebar">
-        <a className="sidebar-brand" href="/dashboard" aria-label="SISKARA Dashboard">
-          <BrandMark />
-          <span>
-            <strong>SISKARA</strong>
-            <small>BBKK Makassar</small>
-          </span>
-        </a>
-
-        <div className="sidebar-section-label">MENU UTAMA</div>
-        <nav className="sidebar-nav" aria-label="Navigasi utama">
-          <a className="sidebar-link is-active" href="#ringkasan" aria-current="page">
-            <Icon name="grid" />
-            Ringkasan
-          </a>
-          <a className="sidebar-link" href="#pengajuan">
-            <Icon name="file" />
-            Pengajuan
-            <span className="sidebar-link__count">{pendingCount}</span>
-          </a>
-        </nav>
-
-        <div className="sidebar-section-label sidebar-section-label--spaced">
-          ADMINISTRASI
-        </div>
-        <nav className="sidebar-nav" aria-label="Menu administrasi">
-          <button className="sidebar-link sidebar-link--muted" type="button" disabled title="Halaman administrasi akan dibuat berikutnya">
-            <Icon name="users" />
-            Pengguna
-          </button>
-          <button className="sidebar-link sidebar-link--muted" type="button" disabled title="Halaman administrasi akan dibuat berikutnya">
-            <Icon name="checklist" />
-            Checklist
-          </button>
-          <button className="sidebar-link sidebar-link--muted" type="button" disabled title="Halaman administrasi akan dibuat berikutnya">
-            <Icon name="database" />
-            Data master
-          </button>
-          <button className="sidebar-link sidebar-link--muted" type="button" disabled title="Halaman administrasi akan dibuat berikutnya">
-            <Icon name="history" />
-            Log aktivitas
-          </button>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <div className="sidebar-support">
-            <span className="sidebar-support__icon">
-              <Icon name="history" size={17} />
-            </span>
-            <strong>Butuh bantuan?</strong>
-            <span>Hubungi administrator sistem.</span>
-            <span className="sidebar-support__contact">Hubungi administrator sistem.</span>
-          </div>
-          <button
-            className="sidebar-profile"
-            type="button"
-            onClick={handleSignOut}
-            disabled={isSigningOut}
-          >
-            <span className="profile-avatar">{greetingName.slice(0, 1).toUpperCase()}</span>
-            <span className="sidebar-profile__identity">
-              <strong>{adminName}</strong>
-              <small>Administrator</small>
-            </span>
-            <Icon name="logout" size={17} />
-          </button>
-        </div>
-      </aside>
-
-      <div className="dashboard-main">
-        <header className="dashboard-topbar">
-          <div className="breadcrumb">
-            <span>Portal Admin</span>
-            <Icon name="chevron" size={14} />
-            <strong>Ringkasan</strong>
-          </div>
-          <div className="topbar-actions">
-            <span className="topbar-date">
-              <Icon name="calendar" size={16} />
-              {today
-                ? new Intl.DateTimeFormat("id-ID", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  }).format(today)
-                : " "}
-            </span>
-            <span className="topbar-divider" />
-            <span className="topbar-avatar" title={adminName}>
-              {greetingName.slice(0, 1).toUpperCase()}
-            </span>
-          </div>
-        </header>
-
-        <div className="dashboard-content" id="ringkasan">
+    <>
+      <div className="dashboard-overview" id="ringkasan">
           <section className="welcome-row">
             <div>
               <span className="eyebrow">DASHBOARD ADMINISTRATOR</span>
@@ -801,7 +665,6 @@ export default function DashboardPage() {
             <span>Portal administrasi internal</span>
           </footer>
         </div>
-      </div>
       {selectedSubmission && (
         <div
           className="detail-backdrop"
@@ -856,6 +719,14 @@ export default function DashboardPage() {
           </section>
         </div>
       )}
-    </main>
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <AdminShell title="Ringkasan">
+      <DashboardContent />
+    </AdminShell>
   );
 }

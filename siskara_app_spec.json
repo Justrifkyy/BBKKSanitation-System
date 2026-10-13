@@ -357,6 +357,41 @@
       "requires_media_on_fail": "boolean",
       "order": "number"
     },
+    "master_ships": {
+      "id": "string (PK)",
+      "nama_kapal": "string (required)",
+      "jenis_kapal": "string",
+      "besar_kapal_grt": "number (nullable)",
+      "bendera": "string",
+      "nomor_imo": "string (nullable, unique when present)",
+      "nama_pemilik_agen": "string",
+      "is_active": "boolean",
+      "created_at": "timestamp",
+      "updated_at": "timestamp",
+      "dibuat_oleh": "string (FK -> users.id)",
+      "diubah_oleh": "string (FK -> users.id)"
+    },
+    "master_aircraft": {
+      "id": "string (PK)",
+      "pemilik_atau_penyelenggara": "string (required)",
+      "tanda_kebangsaan_dan_pendaftaran": "string (required, unique)",
+      "is_active": "boolean",
+      "created_at": "timestamp",
+      "updated_at": "timestamp",
+      "dibuat_oleh": "string (FK -> users.id)",
+      "diubah_oleh": "string (FK -> users.id)"
+    },
+    "master_locations": {
+      "id": "string (PK)",
+      "nama": "string (required)",
+      "jenis": "enum: pelabuhan | bandara | lokasi_sandar",
+      "kode": "string (nullable)",
+      "is_active": "boolean",
+      "created_at": "timestamp",
+      "updated_at": "timestamp",
+      "dibuat_oleh": "string (FK -> users.id)",
+      "diubah_oleh": "string (FK -> users.id)"
+    },
     "submissions": {
       "id": "string (PK)",
       "moda_transportasi": "enum: kapal | pesawat",
@@ -435,7 +470,9 @@
       { "path": "/users/{id}", "methods": ["GET", "PATCH", "DELETE"], "description": "Get/update/deactivate a user." },
       { "path": "/users/search", "methods": ["GET"], "description": "Search existing accounts by name/phone, used when a staf_bbkk creates a kepala account on-site." },
       { "path": "/checklist-templates", "methods": ["GET", "POST"], "description": "List / create checklist templates. role required: validator_admin." },
-      { "path": "/checklist-templates/{id}", "methods": ["GET", "PATCH"], "description": "Get/update a template and its items. role required: validator_admin." }
+      { "path": "/checklist-templates/{id}", "methods": ["GET", "PATCH"], "description": "Get/update a template and its items. role required: validator_admin." },
+      { "path": "/master-data", "methods": ["GET", "POST"], "description": "List/create registered ships, aircraft, ports, airports, and berth locations. role required: validator_admin." },
+      { "path": "/master-data/{id}", "methods": ["PATCH", "DELETE"], "description": "Update/deactivate a master record without deleting historical references. role required: validator_admin." }
     ],
     "auth_rule": "Every route verifies the caller's Firebase ID token and role via firebase-admin before executing. /submissions/{id}/verify is staf_bbkk only. /users (write) and /checklist-templates (write) are validator_admin only. validator_admin has no access to any approve/reject action anywhere in the API."
   },
@@ -443,7 +480,7 @@
   "security_rules_notes": [
     "Firestore rules: kepala_kapal/kepala_penerbangan can only create/read/update their own submissions (pengisi_id == request.auth.uid) while status is `draft`; they cannot edit a submission once it is no longer `draft`.",
     "Firestore rules: staf_bbkk can read submissions with status `menunggu_verifikasi_staf` or `ditolak_otomatis`, and can write only to the verify-related fields (status, verifikator_id) -- enforced primarily through the /verify API route, not direct client writes.",
-    "Firestore rules: validator_admin has broad read access for reporting/export, and write access limited to users and checklist_templates collections.",
+    "Firestore rules: validator_admin has broad read access for reporting/export. User, checklist, and master-data mutations are performed through audited Admin SDK API routes; client writes to those collections are denied.",
     "Storage rules: evidence media (submission_answer_media) is only writable by the owning pengisi while the submission is in `draft`, and read-accessible to staf_bbkk and validator_admin.",
     "Storage rules: signature images are writable only by the owning user account, and read-only for everyone else (used only server-side when composing PDFs)."
   ],

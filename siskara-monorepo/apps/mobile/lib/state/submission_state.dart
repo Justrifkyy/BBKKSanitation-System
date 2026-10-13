@@ -31,7 +31,10 @@ final userSubmissionsProvider = StreamProvider<List<SubmissionModel>>((ref) {
   if (user == null) return const Stream.empty();
 
   final service = ref.read(firestoreServiceProvider);
-  return service.streamUserSubmissions(user.id);
+  return service.streamUserSubmissions(
+    user.id,
+    reviewedByUser: user.isStaf,
+  );
 });
 
 /// Streams submissions pending review (for staf_bbkk).

@@ -9,6 +9,9 @@ export const COLLECTIONS = {
   DOCUMENT_SIGNATURES: 'document_signatures',
   DOKUMEN_HASIL: 'dokumen_hasil',
   AUDIT_LOG: 'audit_log',
+  MASTER_SHIPS: 'master_ships',
+  MASTER_AIRCRAFT: 'master_aircraft',
+  MASTER_LOCATIONS: 'master_locations',
 } as const;
 
 /** Submission status values */

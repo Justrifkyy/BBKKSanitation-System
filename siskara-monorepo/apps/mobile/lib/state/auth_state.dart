@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../core/constants.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -10,9 +13,25 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final authStateProvider = StreamProvider<UserModel?>((ref) {
   final authService = ref.read(authServiceProvider);
 
-  return authService.authStateChanges.asyncMap((fbUser) async {
-    if (fbUser == null) return null;
-    return await authService.getUserProfile(fbUser.uid);
+  return authService.authStateChanges.asyncExpand((fbUser) {
+    if (fbUser == null) return Stream.value(null);
+    return FirebaseFirestore.instanceFor(
+      app: Firebase.app(),
+      databaseId: AppConstants.firebaseDatabaseId,
+    )
+        .collection('users')
+        .doc(fbUser.uid)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      if (!snapshot.exists) {
+        throw StateError('Profil pengguna tidak ditemukan.');
+      }
+      final role = await authService.getUserRole();
+      if (role == null || role != snapshot.data()?['role']) {
+        throw StateError('Role akun tidak valid. Hubungi administrator.');
+      }
+      return UserModel.fromMap(snapshot.data()!, snapshot.id);
+    });
   });
 });
 

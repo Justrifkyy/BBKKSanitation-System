@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../../../state/auth_state.dart';
+import '../../../services/api_service.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -60,7 +61,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registrasi gagal: ${e.toString()}'),
+            content: Text(
+              e is ApiException ? e.message : 'Registrasi gagal. Silakan coba lagi.',
+            ),
             backgroundColor: SiskaraTheme.error,
           ),
         );
@@ -175,7 +178,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Password wajib diisi';
-                    if (v.length < 6) return 'Password minimal 6 karakter';
+                    if (v.length < 8) return 'Password minimal 8 karakter';
                     return null;
                   },
                 ),

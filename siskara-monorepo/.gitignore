@@ -20,6 +20,7 @@ out/
 .env
 .env.local
 .env.*.local
+apps/web/.local/
 
 # --- Flutter / Dart (apps/mobile) ---
 # Dart build

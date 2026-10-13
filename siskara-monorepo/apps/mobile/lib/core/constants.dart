@@ -9,6 +9,10 @@ class AppConstants {
   static const String clientName =
       'Balai Besar Kekarantinaan Kesehatan (BBKK) Makassar';
   static const String ministry = 'Kementerian Kesehatan RI';
+  static const String firebaseDatabaseId = String.fromEnvironment(
+    'FIREBASE_DATABASE_ID',
+    defaultValue: 'bbkkmakassar',
+  );
 
   // ─── Firebase Collections ──────────────────────────────
   static const String colUsers = 'users';
@@ -20,12 +24,6 @@ class AppConstants {
   static const String colDocumentSignatures = 'document_signatures';
   static const String colDokumenHasil = 'dokumen_hasil';
   static const String colAuditLog = 'audit_log';
-
-  // ─── Storage Paths ─────────────────────────────────────
-  static const String storageSignatures = 'signatures';
-  static const String storageSubmissions = 'submissions';
-  static const String storageDocuments = 'documents';
-  static const String storageAssets = 'assets';
 
   // ─── Roles ─────────────────────────────────────────────
   static const String roleKepalaKapal = 'kepala_kapal';
@@ -56,5 +54,8 @@ class AppConstants {
 
   // ─── API Base URL ──────────────────────────────────────
   // TODO: Replace with actual deployed web app URL
-  static const String apiBaseUrl = 'https://siskara-web.vercel.app/api';
+  static const String apiBaseUrl = String.fromEnvironment(
+    'SISKARA_API_BASE_URL',
+    defaultValue: 'https://siskara-web.vercel.app/api',
+  );
 }

@@ -1,12 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../core/constants.dart';
 import '../models/user_model.dart';
+import 'api_service.dart';
 
 /// Handles all Firebase Authentication operations.
 class AuthService {
   final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instanceFor(
+    app: Firebase.app(),
+    databaseId: AppConstants.firebaseDatabaseId,
+  );
 
   /// Current Firebase user stream.
   Stream<fb.User?> get authStateChanges => _auth.authStateChanges();
@@ -34,24 +39,19 @@ class AuthService {
     required String role,
     String? idNumber,
   }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
+    await ApiService().post(
+      '/auth/register',
+      body: {
+        'email': email,
+        'password': password,
+        'nama': nama,
+        'phone': phone,
+        'role': role,
+        'id_number': idNumber,
+      },
     );
 
-    // Create Firestore user document
-    await _firestore.collection(AppConstants.colUsers).doc(credential.user!.uid).set({
-      'nama': nama,
-      'role': role,
-      'phone': phone,
-      'id_number': idNumber,
-      'signature_url': null,
-      'pin_hash': null,
-      'dibuat_oleh': null,
-      'created_at': FieldValue.serverTimestamp(),
-    });
-
-    return credential;
+    return signInWithEmailAndPassword(email: email, password: password);
   }
 
   /// Fetch user profile from Firestore.
@@ -61,21 +61,101 @@ class AuthService {
     return UserModel.fromMap(doc.data()!, doc.id);
   }
 
+  Future<void> updateSignature(String uid, String signatureUrl) async {
+    final user = _auth.currentUser;
+    if (user == null || user.uid != uid) {
+      throw StateError('Pengguna tidak dapat mengubah tanda tangan akun lain.');
+    }
+    await ApiService().post(
+      '/auth/signature',
+      body: {'signature_url': signatureUrl},
+      idToken: await user.getIdToken(),
+    );
+  }
+
   /// Get user role from ID token claims.
   Future<String?> getUserRole() async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
-    final tokenResult = await user.getIdTokenResult(true);
-    final role = tokenResult.claims?['role'] as String?;
-
-    // Fallback: read from Firestore if claim not set yet
+    var tokenResult = await user.getIdTokenResult();
+    var role = tokenResult.claims?['role'] as String?;
     if (role == null) {
-      final profile = await getUserProfile(user.uid);
-      return profile?.role;
+      tokenResult = await user.getIdTokenResult(true);
+      role = tokenResult.claims?['role'] as String?;
     }
-
     return role;
+  }
+
+  Future<void> setPin(String pin) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Pengguna belum masuk.');
+    await ApiService().post(
+      '/auth/pin',
+      body: {'pin': pin},
+      idToken: await user.getIdToken(),
+    );
+  }
+
+  Future<String> signSubmission({
+    required String submissionId,
+    required String pin,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Pengguna belum masuk.');
+    final result = await ApiService().post(
+      '/submissions/$submissionId/sign',
+      body: {'pin': pin},
+      idToken: await user.getIdToken(),
+    );
+    final status = result['status'];
+    if (status is! String) {
+      throw const ApiException('Server tidak mengembalikan status pengajuan.');
+    }
+    return status;
+  }
+
+  Future<void> verifySubmission({
+    required String submissionId,
+    required String decision,
+    required String pin,
+    String? note,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Pengguna belum masuk.');
+    await ApiService().post(
+      '/submissions/$submissionId/verify',
+      body: {
+        'decision': decision,
+        'pin': pin,
+        if (note != null && note.trim().isNotEmpty) 'catatan': note.trim(),
+      },
+      idToken: await user.getIdToken(),
+    );
+  }
+
+  Future<void> createHeadAccount({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required String role,
+    String? idNumber,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Pengguna belum masuk.');
+    await ApiService().post(
+      '/users',
+      idToken: await user.getIdToken(),
+      body: {
+        'email': email,
+        'password': password,
+        'nama': name,
+        'phone': phone,
+        'role': role,
+        'id_number': idNumber,
+      },
+    );
   }
 
   /// Sign out.

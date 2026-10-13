@@ -1,7 +1,14 @@
 import { verifyAuth } from "@/lib/auth";
-import { adminDb, adminStorage } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { COLLECTIONS } from "@/lib/constants";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  deleteObject,
+  headObject,
+  parseStoragePath,
+  promoteObject,
+  storagePath,
+} from "@/lib/r2";
 
 export async function POST(request: NextRequest) {
   const authResult = await verifyAuth(request, [
@@ -19,33 +26,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let signatureUrl: URL;
-  try {
-    signatureUrl = new URL(body.signature_url);
-  } catch {
+  const filePath = parseStoragePath(body.signature_url);
+  const uploadMatch = filePath?.match(
+    /^staging\/signatures\/([A-Za-z0-9_-]+)\/([0-9a-f-]{36})\.png$/i,
+  );
+  if (!filePath || !uploadMatch || uploadMatch[1] !== authResult.user.uid) {
     return NextResponse.json(
-      { error: "Tautan tanda tangan tidak valid." },
+      { error: "Lokasi tanda tangan tidak sesuai dengan akun ini." },
       { status: 400 },
     );
   }
 
-  const filePath = `signatures/${authResult.user.uid}/signature.png`;
-  const expectedPath = `/v0/b/${adminStorage.bucket().name}/o/${encodeURIComponent(filePath)}`;
+  const uploadedObject = await headObject(filePath);
   if (
-    signatureUrl.protocol !== "https:" ||
-    signatureUrl.hostname !== "firebasestorage.googleapis.com" ||
-    signatureUrl.pathname !== expectedPath
+    !uploadedObject ||
+    uploadedObject.ContentType !== "image/png" ||
+    (uploadedObject.ContentLength ?? 0) <= 0 ||
+    (uploadedObject.ContentLength ?? Infinity) > 512 * 1024
   ) {
     return NextResponse.json(
-      { error: "Tanda tangan harus berasal dari penyimpanan akun ini." },
-      { status: 400 },
-    );
-  }
-
-  const [fileExists] = await adminStorage.bucket().file(filePath).exists();
-  if (!fileExists) {
-    return NextResponse.json(
-      { error: "Berkas tanda tangan belum diunggah." },
+      { error: "Berkas tanda tangan belum diunggah atau tidak valid." },
       { status: 404 },
     );
   }
@@ -66,7 +66,32 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await userRef.update({ signature_url: body.signature_url });
+  const permanentKey = `signatures/${authResult.user.uid}/${uploadMatch[2]}.png`;
+  await promoteObject(filePath, permanentKey);
+  const signatureUrl = storagePath(permanentKey);
+  try {
+    await adminDb.runTransaction(async (transaction) => {
+      const currentUser = await transaction.get(userRef);
+      const currentValue = currentUser.data()?.signature_url;
+      if (
+        !currentUser.exists ||
+        (typeof currentValue === "string" && currentValue.length > 0)
+      ) {
+        throw new Error("SIGNATURE_ALREADY_SET");
+      }
+      transaction.update(userRef, { signature_url: signatureUrl });
+    });
+  } catch (error) {
+    await deleteObject(permanentKey);
+    if (error instanceof Error && error.message === "SIGNATURE_ALREADY_SET") {
+      return NextResponse.json(
+        { error: "Tanda tangan sudah disimpan dan tidak dapat diganti." },
+        { status: 409 },
+      );
+    }
+    throw error;
+  }
+
   await adminDb.collection(COLLECTIONS.AUDIT_LOG).add({
     user_id: authResult.user.uid,
     aksi: "save_signature",

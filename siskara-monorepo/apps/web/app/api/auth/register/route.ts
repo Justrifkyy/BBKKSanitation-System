@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     await adminDb.collection(COLLECTIONS.USERS).doc(userRecord.uid).set({
       nama: nama.trim(),
       role,
+      role_id: role,
       phone: phone.trim(),
       id_number: typeof id_number === "string" && id_number.trim() ? id_number.trim() : null,
       signature_url: null,

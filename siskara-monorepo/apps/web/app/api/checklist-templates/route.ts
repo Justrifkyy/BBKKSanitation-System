@@ -25,9 +25,16 @@ export async function GET(request: NextRequest) {
   }
 
   const snapshot = await query.orderBy('versi', 'desc').get();
-  const templates = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
+  const templates = await Promise.all(snapshot.docs.map(async (doc) => {
+    const items = await doc.ref
+      .collection(COLLECTIONS.CHECKLIST_TEMPLATE_ITEMS)
+      .orderBy('order', 'asc')
+      .get();
+    return {
+      id: doc.id,
+      ...doc.data(),
+      items: items.docs.map((item) => ({ id: item.id, ...item.data() })),
+    };
   }));
 
   return NextResponse.json({ templates });
@@ -43,12 +50,27 @@ export async function POST(request: NextRequest) {
   if ('error' in authResult) return authResult.error;
 
   const { user } = authResult;
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Body JSON tidak valid.' }, { status: 400 });
+  }
   const { moda_transportasi, nama_template, items } = body;
 
-  if (!moda_transportasi || !nama_template) {
+  if (
+    !['kapal', 'pesawat'].includes(String(moda_transportasi)) ||
+    typeof nama_template !== 'string' ||
+    !nama_template.trim() ||
+    !Array.isArray(items) ||
+    items.length === 0 ||
+    items.length > 200 ||
+    items.some((item) => !item || typeof item !== 'object' ||
+      typeof (item as Record<string, unknown>).label !== 'string' ||
+      !(item as Record<string, unknown>).label?.toString().trim())
+  ) {
     return NextResponse.json(
-      { error: 'Missing required fields: moda_transportasi, nama_template' },
+      { error: 'Moda, nama template, atau daftar item tidak valid (1–200 item berlabel wajib).' },
       { status: 400 }
     );
   }
@@ -61,43 +83,44 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .get();
 
-  const latestVersion = existingSnapshot.empty ? 0 : existingSnapshot.docs[0].data().versi;
+  const latestVersion = existingSnapshot.empty ? 0 : Number(existingSnapshot.docs[0].data().versi) || 0;
 
-  // Create the template
-  const templateRef = await adminDb.collection(COLLECTIONS.CHECKLIST_TEMPLATES).add({
+  const templateRef = adminDb.collection(COLLECTIONS.CHECKLIST_TEMPLATES).doc();
+  const batch = adminDb.batch();
+  batch.create(templateRef, {
     moda_transportasi,
-    nama_template,
+    nama_template: nama_template.trim(),
     versi: latestVersion + 1,
     is_active: false, // Must be explicitly activated
+    created_at: new Date(),
   });
 
-  // Create template items if provided
-  if (items && Array.isArray(items)) {
-    const batch = adminDb.batch();
-    items.forEach((item: Record<string, unknown>, index: number) => {
-      const itemRef = templateRef.collection(COLLECTIONS.CHECKLIST_TEMPLATE_ITEMS).doc();
-      batch.set(itemRef, {
-        template_id: templateRef.id,
-        kategori: item.kategori || '',
-        label: item.label || '',
-        tipe_input: item.tipe_input || 'binary',
-        opsi_jawaban: item.opsi_jawaban || item.condition_options || [],
-        nilai_gagal: item.nilai_gagal || '',
-        auto_reject_on_fail: item.auto_reject_on_fail ?? false,
-        requires_media_on_fail: item.requires_media_on_fail ?? false,
-        order: index,
-      });
+  items.forEach((rawItem, index) => {
+    const item = rawItem as Record<string, unknown>;
+    const itemRef = templateRef.collection(COLLECTIONS.CHECKLIST_TEMPLATE_ITEMS).doc();
+    batch.create(itemRef, {
+      template_id: templateRef.id,
+      kategori: typeof item.kategori === 'string' ? item.kategori.trim() : '',
+      label: (item.label as string).trim(),
+      tipe_input: typeof item.tipe_input === 'string' ? item.tipe_input : 'binary',
+      opsi_jawaban: Array.isArray(item.opsi_jawaban) ? item.opsi_jawaban : [],
+      nilai_gagal: item.nilai_gagal ?? '',
+      nilai_perlu_alasan: item.nilai_perlu_alasan ?? null,
+      nilai_perlu_media: item.nilai_perlu_media ?? null,
+      auto_reject_on_fail: item.auto_reject_on_fail === true,
+      requires_media_on_fail: item.requires_media_on_fail === true,
+      wajib_diisi: item.wajib_diisi !== false,
+      wajib_jika: item.wajib_jika ?? null,
+      order: index,
     });
-    await batch.commit();
-  }
-
-  // Audit log
-  await adminDb.collection(COLLECTIONS.AUDIT_LOG).add({
+  });
+  batch.create(adminDb.collection(COLLECTIONS.AUDIT_LOG).doc(), {
     user_id: user.uid,
     aksi: 'create_checklist_template',
     entitas_terkait: `checklist_templates/${templateRef.id}`,
     waktu: new Date(),
   });
+  await batch.commit();
 
   return NextResponse.json(
     { id: templateRef.id, versi: latestVersion + 1 },

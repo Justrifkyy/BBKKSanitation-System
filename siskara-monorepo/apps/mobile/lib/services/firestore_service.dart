@@ -1,11 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../core/constants.dart';
 import '../models/submission_model.dart';
 import '../models/checklist_template_model.dart';
 
 /// Handles Firestore operations for submissions and checklist data.
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instanceFor(
+    app: Firebase.app(),
+    databaseId: AppConstants.firebaseDatabaseId,
+  );
 
   // ─── Checklist Templates ────────────────────────────────
 
@@ -47,6 +51,32 @@ class FirestoreService {
     return docRef.id;
   }
 
+  Future<void> createSubmissionWithId(
+    String submissionId,
+    SubmissionModel submission,
+  ) async {
+    await _firestore
+        .collection(AppConstants.colSubmissions)
+        .doc(submissionId)
+        .set(submission.toMap());
+  }
+
+  String newSubmissionId() =>
+      _firestore.collection(AppConstants.colSubmissions).doc().id;
+
+  Future<void> saveAnswerForItem({
+    required String submissionId,
+    required String itemId,
+    required Map<String, dynamic> answer,
+  }) async {
+    await _firestore
+        .collection(AppConstants.colSubmissions)
+        .doc(submissionId)
+        .collection(AppConstants.colSubmissionAnswers)
+        .doc(itemId)
+        .set(answer, SetOptions(merge: true));
+  }
+
   /// Update a submission.
   Future<void> updateSubmission(String submissionId, Map<String, dynamic> data) async {
     data['updated_at'] = FieldValue.serverTimestamp();
@@ -68,10 +98,16 @@ class FirestoreService {
   }
 
   /// Stream submissions for a specific user (kepala roles).
-  Stream<List<SubmissionModel>> streamUserSubmissions(String userId) {
+  Stream<List<SubmissionModel>> streamUserSubmissions(
+    String userId, {
+    bool reviewedByUser = false,
+  }) {
     return _firestore
         .collection(AppConstants.colSubmissions)
-        .where('pengisi_id', isEqualTo: userId)
+        .where(
+          reviewedByUser ? 'verifikator_id' : 'pengisi_id',
+          isEqualTo: userId,
+        )
         .orderBy('created_at', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
@@ -126,21 +162,6 @@ class FirestoreService {
   }
 
   // ─── Media ──────────────────────────────────────────────
-
-  /// Save media metadata for an answer.
-  Future<void> saveAnswerMedia(
-    String submissionId,
-    String answerId,
-    SubmissionAnswerMediaModel media,
-  ) async {
-    await _firestore
-        .collection(AppConstants.colSubmissions)
-        .doc(submissionId)
-        .collection(AppConstants.colSubmissionAnswers)
-        .doc(answerId)
-        .collection(AppConstants.colSubmissionAnswerMedia)
-        .add(media.toMap());
-  }
 
   /// Get all media for an answer.
   Future<List<SubmissionAnswerMediaModel>> getAnswerMedia(

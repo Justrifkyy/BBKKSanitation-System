@@ -1,14 +1,5 @@
 /// User model matching the Firestore `users` collection schema.
 class UserModel {
-  final String id;
-  final String nama;
-  final String role;
-  final String phone;
-  final String? idNumber;
-  final String? signatureUrl;
-  final String? pinHash;
-  final String? dibuatOleh;
-  final DateTime createdAt;
 
   const UserModel({
     required this.id,
@@ -17,7 +8,7 @@ class UserModel {
     required this.phone,
     this.idNumber,
     this.signatureUrl,
-    this.pinHash,
+    this.hasPin = false,
     this.dibuatOleh,
     required this.createdAt,
   });
@@ -30,11 +21,20 @@ class UserModel {
       phone: map['phone'] ?? '',
       idNumber: map['id_number'],
       signatureUrl: map['signature_url'],
-      pinHash: map['pin_hash'],
+      hasPin: map['has_pin'] == true,
       dibuatOleh: map['dibuat_oleh'],
       createdAt: (map['created_at'] as dynamic)?.toDate() ?? DateTime.now(),
     );
   }
+  final String id;
+  final String nama;
+  final String role;
+  final String phone;
+  final String? idNumber;
+  final String? signatureUrl;
+  final bool hasPin;
+  final String? dibuatOleh;
+  final DateTime createdAt;
 
   Map<String, dynamic> toMap() {
     return {
@@ -43,7 +43,7 @@ class UserModel {
       'phone': phone,
       'id_number': idNumber,
       'signature_url': signatureUrl,
-      'pin_hash': pinHash,
+      'has_pin': hasPin,
       'dibuat_oleh': dibuatOleh,
       'created_at': createdAt,
     };
@@ -69,7 +69,7 @@ class UserModel {
     String? phone,
     String? idNumber,
     String? signatureUrl,
-    String? pinHash,
+    bool? hasPin,
   }) {
     return UserModel(
       id: id,
@@ -78,7 +78,7 @@ class UserModel {
       phone: phone ?? this.phone,
       idNumber: idNumber ?? this.idNumber,
       signatureUrl: signatureUrl ?? this.signatureUrl,
-      pinHash: pinHash ?? this.pinHash,
+      hasPin: hasPin ?? this.hasPin,
       dibuatOleh: dibuatOleh,
       createdAt: createdAt,
     );
