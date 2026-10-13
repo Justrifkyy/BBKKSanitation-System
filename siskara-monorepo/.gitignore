@@ -1,0 +1,63 @@
+# =========================
+# SISKARA Monorepo .gitignore
+# =========================
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Node / Next.js (apps/web) ---
+node_modules/
+.next/
+out/
+.env
+.env.local
+.env.*.local
+
+# --- Flutter / Dart (apps/mobile) ---
+# Dart build
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.packages
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# Android
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/android/local.properties
+apps/mobile/android/key.properties
+apps/mobile/android/*.keystore
+apps/mobile/android/*.jks
+
+# iOS
+apps/mobile/ios/Pods/
+apps/mobile/ios/.symlinks/
+apps/mobile/ios/Flutter/Flutter.framework
+apps/mobile/ios/Flutter/Flutter.podspec
+apps/mobile/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+
+# --- Firebase ---
+# Never commit service account keys
+**/serviceAccountKey.json
+**/service-account-key.json
+firebase/firebase-debug.log
+firebase/.firebaserc
+
+# --- Secrets ---
+# Firebase config files (contain API keys)
+apps/mobile/android/app/google-services.json
+apps/mobile/ios/Runner/GoogleService-Info.plist
+apps/web/.env.local

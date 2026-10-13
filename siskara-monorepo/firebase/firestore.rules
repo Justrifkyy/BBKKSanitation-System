@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ──────────────────────────────────────────────
+    // Helper functions
+    // ──────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isAnyRole(roles) {
+      return isAuthenticated() && request.auth.token.role in roles;
+    }
+
+    // ──────────────────────────────────────────────
+    // users collection
+    // ──────────────────────────────────────────────
+    match /users/{userId} {
+      // Any authenticated user can read their own profile
+      // staf_bbkk can read any user (for account creation lookup)
+      // validator_admin can read/write all users
+      allow read: if isOwner(userId) 
+                  || hasRole('staf_bbkk') 
+                  || hasRole('validator_admin');
+
+      allow create: if hasRole('validator_admin') 
+                    || hasRole('staf_bbkk');
+
+      allow update: if hasRole('validator_admin')
+                    || (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+
+      allow delete: if hasRole('validator_admin');
+    }
+
+    // ──────────────────────────────────────────────
+    // checklist_templates collection
+    // ──────────────────────────────────────────────
+    match /checklist_templates/{templateId} {
+      // All authenticated users can read templates (mobile needs them to render forms)
+      allow read: if isAuthenticated();
+
+      // Only validator_admin can create/update templates
+      allow write: if hasRole('validator_admin');
+
+      // Template items subcollection
+      match /items/{itemId} {
+        allow read: if isAuthenticated();
+        allow write: if hasRole('validator_admin');
+      }
+    }
+
+    // ──────────────────────────────────────────────
+    // submissions collection
+    // ──────────────────────────────────────────────
+    match /submissions/{submissionId} {
+      // kepala_kapal / kepala_penerbangan can read/create their own submissions
+      allow create: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
+                    && request.resource.data.pengisi_id == request.auth.uid;
+
+      allow read: if isOwner(resource.data.pengisi_id)
+                  || hasRole('staf_bbkk')
+                  || hasRole('validator_admin');
+
+      // kepala can only update while status is 'draft'
+      allow update: if (isOwner(resource.data.pengisi_id) && resource.data.status == 'draft')
+                    || hasRole('staf_bbkk')
+                    || hasRole('validator_admin');
+
+      allow delete: if false; // Submissions are never deleted
+
+      // submission_answers subcollection
+      match /answers/{answerId} {
+        allow read: if isAuthenticated();
+
+        allow create: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
+                      && get(/databases/$(database)/documents/submissions/$(submissionId)).data.pengisi_id == request.auth.uid
+                      && get(/databases/$(database)/documents/submissions/$(submissionId)).data.status == 'draft';
+
+        allow update: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
+                      && get(/databases/$(database)/documents/submissions/$(submissionId)).data.pengisi_id == request.auth.uid
+                      && get(/databases/$(database)/documents/submissions/$(submissionId)).data.status == 'draft';
+
+        allow delete: if false;
+
+        // submission_answer_media subcollection
+        match /media/{mediaId} {
+          allow read: if isAuthenticated();
+
+          allow create: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
+                        && get(/databases/$(database)/documents/submissions/$(submissionId)).data.pengisi_id == request.auth.uid
+                        && get(/databases/$(database)/documents/submissions/$(submissionId)).data.status == 'draft';
+
+          allow delete: if false;
+        }
+      }
+    }
+
+    // ──────────────────────────────────────────────
+    // document_signatures collection
+    // ──────────────────────────────────────────────
+    match /document_signatures/{sigId} {
+      allow read: if isAuthenticated();
+      allow create: if isAnyRole(['kepala_kapal', 'kepala_penerbangan', 'staf_bbkk']);
+      allow update, delete: if false;
+    }
+
+    // ──────────────────────────────────────────────
+    // dokumen_hasil collection
+    // ──────────────────────────────────────────────
+    match /dokumen_hasil/{docId} {
+      allow read: if isAuthenticated();
+      // Only server-side (API routes with admin SDK) generates documents
+      allow write: if false;
+    }
+
+    // ──────────────────────────────────────────────
+    // audit_log collection
+    // ──────────────────────────────────────────────
+    match /audit_log/{logId} {
+      allow read: if hasRole('validator_admin');
+      // Only server-side writes audit logs
+      allow write: if false;
+    }
+  }
+}

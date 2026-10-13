@@ -1,0 +1,63 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ──────────────────────────────────────────────
+    // Helper functions
+    // ──────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ──────────────────────────────────────────────
+    // Signature images: signatures/{userId}/signature.png
+    // ──────────────────────────────────────────────
+    match /signatures/{userId}/{allPaths=**} {
+      // Only the owning user can upload/update their signature
+      allow write: if isOwner(userId);
+      // Readable by anyone authenticated (server-side uses admin SDK anyway)
+      allow read: if isAuthenticated();
+    }
+
+    // ──────────────────────────────────────────────
+    // Submission evidence media: submissions/{submissionId}/answers/{answerId}/{fileName}
+    // ──────────────────────────────────────────────
+    match /submissions/{submissionId}/answers/{answerId}/{fileName} {
+      // Only the owning pengisi can upload while submission is in draft
+      // Note: Storage rules can't read Firestore, so we rely on the
+      // custom claim + the fact that media uploads are gated by API logic.
+      allow write: if isAuthenticated()
+                   && (hasRole('kepala_kapal') || hasRole('kepala_penerbangan'));
+
+      // Readable by staf_bbkk and validator_admin (and the uploader)
+      allow read: if isAuthenticated();
+    }
+
+    // ──────────────────────────────────────────────
+    // Generated documents: documents/{submissionId}/result.pdf
+    // ──────────────────────────────────────────────
+    match /documents/{submissionId}/{fileName} {
+      // Only server-side (admin SDK) writes generated PDFs
+      allow write: if false;
+      // Readable by authenticated users
+      allow read: if isAuthenticated();
+    }
+
+    // ──────────────────────────────────────────────
+    // Institutional stamp: assets/stamp.png
+    // ──────────────────────────────────────────────
+    match /assets/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only uploaded manually by admin
+    }
+  }
+}

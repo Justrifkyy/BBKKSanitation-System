@@ -1,0 +1,486 @@
+{
+  "$schema_note": "Full ground-up specification for the SISKARA application, written for a project that is about to be built from scratch. This file is meant to be read by AI coding assistants (e.g. in VS Code / Claude Code) as the single source of truth before writing any code. Keep it updated whenever a design decision changes.",
+  "app_name": "SISKARA",
+  "full_name": "Sistem Skrining dan Pemeriksaan Kesehatan Kapal dan Pesawat Udara",
+  "client": "Balai Besar Kekarantinaan Kesehatan (BBKK) Makassar - Kementerian Kesehatan RI",
+  "spec_version": "1.0.0",
+  "last_updated": "2026-10-05",
+
+  "overview": "SISKARA digitizes BBKK's health quarantine inspection process for ships and aircraft. Ship/aircraft crew self-declare their sanitation condition through a mobile form -- filling general data, the full sanitation checklist, and capturing evidence photos/videos -- and BBKK staff review that declaration and give a final approve/reject decision. On approval, an official document is generated automatically: a PHQC for ships, or a generic Berkas Verifikasi for aircraft (aircraft never receive a PHQC). Core design principles: (1) a user's role is always determined server-side and never chosen manually at login; (2) all accounts are permanent (no temporary/guest sessions, no QR-code linking mechanism); (3) checklist structure is template-driven in the database so new transport modes or form revisions never require an app code release; (4) a submission is auto-rejected the instant any checklist item fails, without needing a staff review; only submissions that pass automatic evaluation reach the staff review step; (5) the staff member's approval is a single, final decision -- there is no second approval stage anywhere else in the system.",
+
+  "tech_stack": {
+    "mobile": {
+      "framework": "Flutter",
+      "language": "Dart",
+      "target_platforms": ["Android", "iOS"],
+      "state_management": "Riverpod or BLoC -- pick one and stay consistent across the codebase",
+      "key_packages": [
+        "firebase_auth",
+        "cloud_firestore",
+        "firebase_storage",
+        "firebase_messaging",
+        "camera or image_picker (camera-only capture; gallery picking must be disabled for evidence photos/videos)",
+        "geolocator",
+        "flutter_secure_storage (session token only -- never store the signing PIN locally)"
+      ]
+    },
+    "web": {
+      "framework": "Next.js (App Router)",
+      "language": "TypeScript",
+      "styling": "Tailwind CSS",
+      "key_packages": [
+        "firebase-admin (server-side only, used inside API routes)",
+        "firebase (client SDK, browser-side auth/session)",
+        "exceljs (Excel export)",
+        "pdf-lib or puppeteer (PDF generation with stamp + signatures, for both PHQC and Berkas Verifikasi templates)"
+      ]
+    },
+    "backend": {
+      "type": "Next.js API Routes (serverless functions)",
+      "location": "apps/web/app/api/**/route.ts",
+      "auth_check": "Every route verifies the caller's Firebase ID token server-side and reads their role from custom claims via firebase-admin before executing anything."
+    },
+    "backend_services": {
+      "provider": "Firebase",
+      "services": ["Authentication", "Cloud Firestore", "Cloud Storage", "Cloud Messaging (FCM)"]
+    }
+  },
+
+  "repository_structure": {
+    "type": "monorepo",
+    "root": "siskara-monorepo/",
+    "rationale": "Flutter (Dart) and Next.js (TypeScript) share no code, so plain folders are used instead of a monorepo tool (Turborepo/Nx). CI workflows are path-filtered so each app only rebuilds when its own folder changes.",
+    "tree": {
+      ".github/workflows": ["build-mobile.yml", "deploy-web.yml", "deploy-firebase-rules.yml"],
+      "apps/mobile": {
+        "description": "Flutter project (siskara_mobile)",
+        "android": ["app/google-services.json"],
+        "ios": [],
+        "lib": ["main.dart", "app.dart", "core/", "models/", "services/", "state/", "features/", "widgets/"],
+        "root_files": ["pubspec.yaml"]
+      },
+      "apps/web": {
+        "description": "Next.js project (siskara_web)",
+        "folders": ["app/", "components/", "lib/", "types/"],
+        "root_files": ["middleware.ts", "next.config.js", "package.json", "tsconfig.json"]
+      },
+      "firebase": {
+        "description": "Centralized Firebase security configuration shared by both apps",
+        "files": [".firebaserc", "firestore.rules", "firestore.indexes.json", "storage.rules", "firebase.json"]
+      },
+      "root_files": [".gitignore", "README.md"]
+    }
+  },
+
+  "roles": [
+    {
+      "id": "kepala_kapal",
+      "display_name": "Kepala Kapal (Nahkoda)",
+      "platform": "mobile",
+      "account_creation": "Self-registers in the app, or is created on-site by a staf_bbkk user. Account is permanent either way.",
+      "can_self_register": true,
+      "summary": "Self-declares the full ship sanitation form: general data, the entire checklist, evidence photos/videos for failing items, and reasons for failures. Signs digitally as the declarant."
+    },
+    {
+      "id": "kepala_penerbangan",
+      "display_name": "Kepala Penerbangan (Pilot)",
+      "platform": "mobile",
+      "account_creation": "Self-registers in the app, or is created on-site by a staf_bbkk user. Account is permanent either way.",
+      "can_self_register": true,
+      "summary": "Self-declares the full aircraft sanitation form: general data, the entire checklist, evidence photos/videos for failing items, and reasons for failures. Signs digitally as the declarant."
+    },
+    {
+      "id": "staf_bbkk",
+      "display_name": "Staf BBKK (Verifikator)",
+      "platform": "mobile",
+      "account_creation": "Created by Admin only. Permanent account.",
+      "can_self_register": false,
+      "summary": "Reviews self-declared submissions that already passed automatic checklist evaluation. Gives the approve / reject / request-revision decision. This decision is FINAL (single-stage) and automatically triggers document generation (PHQC for kapal, Berkas Verifikasi for pesawat). Signs digitally as the verifier."
+    },
+    {
+      "id": "validator_admin",
+      "display_name": "Admin",
+      "platform": "web",
+      "account_creation": "Created by Admin (or a bootstrap super-admin account). Permanent account.",
+      "can_self_register": false,
+      "summary": "Purely administrative: manages user accounts, manages checklist templates, exports data, views generated documents, and reviews audit logs. Has no approve/reject capability anywhere -- that decision belongs exclusively to staf_bbkk."
+    }
+  ],
+
+  "auth_model": {
+    "principle": "A user's role is fixed once, at account creation, and stored server-side. The client never presents a role picker at login; the app reads the role automatically right after authentication and routes to the matching UI.",
+    "role_storage": "Firebase Auth custom claims are the source of truth for access control, mirrored into a `users` Firestore document for easy querying/display.",
+    "login_flow": [
+      "User authenticates with Firebase Auth (email/password or phone).",
+      "Client reads the ID token's custom claim `role`.",
+      "Client fetches the matching `users/{uid}` document for profile data (name, signature_url, etc).",
+      "The app automatically opens the screen matching that role: kepala_kapal sees the ship sanitation form, kepala_penerbangan sees the aircraft sanitation form, staf_bbkk sees the review/approval queue, validator_admin sees the web admin dashboard. No manual role selection exists anywhere in either app."
+    ],
+    "account_linking": "When a staf_bbkk needs to help a kepala who has no account yet, they can create one on the spot (name, id number, phone) directly from the mobile app -- no QR code or session code is used or required.",
+    "digital_signature": {
+      "storage": "Each account has one permanent signature image (signature_url), captured once (drawn or uploaded) during account setup.",
+      "confirmation_required": "A PIN (or password) confirmation is required every time a signature is applied to a document. This check MUST happen server-side (API route), never only on the client.",
+      "legal_validity": "This is a stored-image signature for internal BBKK documentation purposes only -- it is not a certified electronic signature. A certified e-signature provider (e.g. PrivyID, VIDA, Digisign, Peruri) can be integrated later if legal force becomes a requirement.",
+      "stamp": "The institutional stamp is a static image baked into the PDF template; it is not tied to any specific user account."
+    }
+  },
+
+  "core_business_flow": [
+    "1. kepala_kapal or kepala_penerbangan logs in. The app automatically opens the form matching their role (ship sanitation form, or aircraft sanitation form) -- there is no mode/role picker anywhere in the UI.",
+    "2. They fill the 'Data Umum' (general data) section for their vessel or flight.",
+    "3. They fill the entire checklist themselves (self-declaration), rendered dynamically from the active checklist_template for their transport mode.",
+    "4. For any checklist item whose answer falls into a 'fail' category, the app requires a written reason (alasan) and a real-time photo/video captured from the in-app camera (gallery picking is disabled), with GPS and timestamp attached automatically.",
+    "5. They sign digitally as the declarant (PIN confirmation triggers the stored signature image being stamped onto the draft document).",
+    "6. On submit, the backend evaluates every checklist answer against the active template's fail rules. If any item fails, the submission status becomes `ditolak_otomatis` immediately -- staf_bbkk does not need to act on this, it only appears to them as an informational field-finding report. If every item passes, status becomes `menunggu_verifikasi_staf`.",
+    "7. staf_bbkk opens their review queue, which lists submissions with status `menunggu_verifikasi_staf`: general data, checklist answers, and evidence media are all visible there.",
+    "8. staf_bbkk approves, or rejects / requests revision. They sign digitally as the verifier (PIN confirmation).",
+    "9. staf_bbkk's approval is FINAL -- there is no further approval stage anywhere else. The moment they approve, the backend automatically (a) generates the final PDF with the stamp and both signatures, (b) sets the resulting document's type to `phqc` if the transport mode is `kapal`, or `berkas_verifikasi` if `pesawat` (aircraft never receive a PHQC), and (c) sets the submission status to `final`.",
+    "10. validator_admin can view and export the resulting documents and data at any time, and manages checklist templates and user accounts, but has no approve/reject action anywhere in their UI."
+  ],
+
+  "features": {
+    "mobile_app": {
+      "kepala_kapal_dan_penerbangan": [
+        "Register (self-service), or be created on-site by a staf_bbkk user",
+        "Login -> automatically routed to the form matching their role",
+        "Fill 'Data Umum' for their vessel or aircraft",
+        "Fill the full sanitation checklist (self-declaration)",
+        "In-app camera capture (photo/video) for failing items, with automatic GPS + timestamp",
+        "Mandatory 'alasan' (reason) text field whenever an item fails",
+        "Digital signature with PIN confirmation, as declarant",
+        "Submit",
+        "View submission status and history (ditolak_otomatis / menunggu_verifikasi_staf / ditolak_staf / final)",
+        "View/download the resulting PHQC or Berkas Verifikasi once status is final"
+      ],
+      "staf_bbkk": [
+        "Login",
+        "Review queue listing submissions with status `menunggu_verifikasi_staf`",
+        "Read-only visibility into auto-rejected submissions (`ditolak_otomatis`) as field-finding reports",
+        "Submission detail view: general data + checklist answers + evidence media viewer",
+        "Approve (final, auto-generates the document) or Reject / request revision",
+        "Digital signature with PIN confirmation, as verifier",
+        "View history of submissions they have reviewed"
+      ]
+    },
+    "web_app": {
+      "validator_admin": [
+        "Login",
+        "Dashboard listing all submissions, filterable by status/date/transport mode (read-only regarding the approval decision)",
+        "View submission detail and resulting documents (PHQC / Berkas Verifikasi)",
+        "Export data to Excel/CSV/PDF with filters",
+        "User management (create/update/deactivate accounts for all four roles)",
+        "Checklist template management (add/edit items, input types, fail thresholds, per transport mode)",
+        "Master data management (e.g. registered ships/aircraft, ports/airports)",
+        "Audit log viewer"
+      ]
+    }
+  },
+
+  "checklist_system": {
+    "description": "The checklist is never hardcoded per transport mode. It is defined by checklist_templates + checklist_template_items documents, and the mobile form renders fields dynamically based on each item's input_type. This lets BBKK add new transport modes or revise forms through data changes alone, with no app release required. The checklist is filled by kepala_kapal / kepala_penerbangan as a self-declaration, and reviewed by staf_bbkk.",
+    "templates": {
+      "kapal": {
+        "reference_form": "Formulir Pemeriksaan Higiene Sanitasi Kapal (PMK RI No. 40 Tahun 2015)",
+        "filled_by": "kepala_kapal",
+        "reviewed_by": "staf_bbkk",
+        "on_approval_issues": "phqc",
+        "data_umum_fields": [
+          { "field": "nama_kapal", "type": "text", "required": true },
+          { "field": "jenis_kapal", "type": "text_or_select", "required": true },
+          { "field": "besar_kapal_grt", "type": "number", "required": true },
+          { "field": "bendera", "type": "text_or_country_select", "required": true },
+          { "field": "nomor_imo", "type": "text", "required": true },
+          { "field": "pelabuhan_asal", "type": "text_or_select", "required": true },
+          { "field": "nama_pemilik_agen", "type": "text", "required": true },
+          { "field": "tujuan_pelabuhan_berikutnya", "type": "text_or_select", "required": false },
+          { "field": "tanggal_jam_tiba", "type": "datetime", "required": true },
+          { "field": "tanggal_jam_berangkat", "type": "datetime", "required": false },
+          { "field": "diperiksa_tanggal_jam", "type": "datetime", "required": true, "default": "submit time, editable" },
+          { "field": "lokasi_sandar", "type": "text_or_select", "required": true },
+          { "field": "jumlah_awak_kapal", "type": "number", "required": true },
+          { "field": "jumlah_penumpang", "type": "number", "required": false }
+        ],
+        "checklist_sections": {
+          "B_higiene_sanitasi": {
+            "locations": [
+              "Dapur (Galley)", "Ruang Rakit Makanan (Pantry)", "Gudang (Storage)", "Palka/Cargo",
+              "Ruang Tidur - ABK (Crew)", "Ruang Tidur - Perwira (Officer)", "Ruang Tidur - Penumpang (Passenger)",
+              "Ruang Pemeriksaan (Examination room)", "Geladak (Deck)", "Air Minum (Portable Water)",
+              "Limbah Cair (Sewage)", "Air Balas (Water Ballast)", "Limbah Medis Cair/Padat",
+              "Air Tergenang/Permukaan (Standing Water)", "Ruang Mesin (Engine Room)",
+              "Fasilitas Medik (Medical Facilities)", "Area Lainnya"
+            ],
+            "input_type": "single_select",
+            "condition_options": ["memenuhi_syarat", "tidak_memenuhi_syarat"],
+            "fail_value": "tidak_memenuhi_syarat",
+            "fields_per_location": ["kondisi (required)", "rekomendasi (optional text)", "alasan (required if fail)", "media (required if fail, photo or video)"],
+            "auto_reject_on_fail": true
+          },
+          "C_vektor_binatang_penular": {
+            "locations": "same 17 locations as B_higiene_sanitasi",
+            "input_type": "single_select",
+            "condition_options": ["tidak_tampak_tanda", "tampak_tanda"],
+            "fail_value": "tampak_tanda",
+            "fields_per_location": ["kondisi (required)", "rekomendasi (optional text)", "alasan (required if fail)", "media (required if fail, photo or video)"],
+            "auto_reject_on_fail": true
+          }
+        }
+      },
+      "pesawat": {
+        "reference_form": "Formulir Pemeriksaan Sanitasi Pesawat Udara (BBKK)",
+        "filled_by": "kepala_penerbangan",
+        "reviewed_by": "staf_bbkk",
+        "on_approval_issues": "berkas_verifikasi",
+        "data_umum_fields": [
+          { "field": "pemilik_atau_penyelenggara", "type": "text", "required": true },
+          { "field": "nomor_penerbangan", "type": "text", "required": true },
+          { "field": "tanda_kebangsaan_dan_pendaftaran", "type": "text", "required": true },
+          { "field": "tanggal_jam", "type": "datetime", "required": true },
+          { "field": "berangkat_dari", "type": "text_or_select", "required": true },
+          { "field": "tujuan", "type": "text_or_select", "required": true }
+        ],
+        "checklist_items": [
+          {
+            "no": 1, "item": "Kabin Penumpang",
+            "sub_items": ["Lantai", "Kursi", "Meja", "Asbak", "Kantong belakang kursi"],
+            "input_type": "three_level_per_sub_item",
+            "condition_options": ["baik", "cukup", "kurang"],
+            "fail_rules": { "kurang": { "requires_reason_and_media": true, "auto_reject": true }, "cukup": { "requires_reason_and_media": true, "auto_reject": false } }
+          },
+          {
+            "no": 2, "item": "Kompartemen Toilet",
+            "sub_items": ["Lantai", "Alas duduk & penutup", "Tempat sampah", "Tempat cuci tangan", "Kaca"],
+            "input_type": "three_level_per_sub_item",
+            "condition_options": ["baik", "cukup", "kurang"],
+            "fail_rules": { "kurang": { "requires_reason_and_media": true, "auto_reject": true }, "cukup": { "requires_reason_and_media": true, "auto_reject": false } }
+          },
+          {
+            "no": 3, "item": "Tempat Penyimpanan Makanan (Galley)",
+            "sub_items": ["Lantai", "Alas tempat kerja", "Bak cuci", "Tempat sampah", "Ruang tempat kontainer"],
+            "input_type": "three_level_per_sub_item",
+            "condition_options": ["baik", "cukup", "kurang"],
+            "fail_rules": { "kurang": { "requires_reason_and_media": true, "auto_reject": true }, "cukup": { "requires_reason_and_media": true, "auto_reject": false } }
+          },
+          {
+            "no": 4, "item": "Pembuangan Kotoran Cair (Excreta Disposal)",
+            "sub_items": [
+              "Tipe toilet (Portable/Suitable) - checkbox",
+              "Ditangani petugas khusus - ya/tidak",
+              "Diangkat dalam keadaan tertutup - ya/tidak",
+              "Tercecer waktu diangkat - ya/tidak"
+            ],
+            "input_type": "mixed_checkbox_yesno",
+            "fail_rules": { "any_negative_answer": { "requires_reason_and_media": true, "auto_reject": true } }
+          },
+          {
+            "no": 5, "item": "Penanganan Penyediaan Air",
+            "sub_items": [
+              "Ditangani petugas khusus - ya/tidak",
+              "Sisa kadar chlorine (ppm, aircraft & watercar) - number",
+              "Banyaknya contoh (aircraft & watercar) - number"
+            ],
+            "input_type": "mixed_checkbox_number",
+            "fail_rules": { "ditangani_petugas_khusus_false": { "requires_reason_and_media": true, "auto_reject": true } }
+          },
+          {
+            "no": 6, "item": "Keadaan Makanan Secara Fisik",
+            "sub_items": [
+              "Baik/Jelek - checkbox",
+              "Jika Jelek: Busuk, Lendir, Jamur, Tercemar - multi checkbox",
+              "Banyaknya contoh - number",
+              "Jenis makanan - text"
+            ],
+            "input_type": "mixed_checkbox_text_number",
+            "fail_rules": { "jelek_selected": { "requires_reason_and_media": true, "auto_reject": true } }
+          },
+          {
+            "no": 7, "item": "Binatang Pengganggu (Pest Infestation)",
+            "sub_items": ["Nyamuk", "Lalat", "Kecoak", "Tikus", "Lain-lain"],
+            "input_type": "multi_select_checkbox",
+            "fail_rules": { "any_selected": { "requires_reason_and_media": true, "auto_reject": true } }
+          },
+          {
+            "no": 8, "item": "Tindakan Pemberantasan Serangga Selama Penerbangan",
+            "sub_items": ["Nama insektisida - text", "Jumlah dipakai (gram) - number", "Nomor tabung yang dipakai - text"],
+            "input_type": "mixed_text_number",
+            "required": "conditional, only if item 7 found any pest"
+          }
+        ],
+        "extra_fields": [
+          { "field": "rekomendasi_dan_tindakan", "type": "textarea", "required": false }
+        ]
+      }
+    },
+    "evaluation_logic_note": "The exact mapping of which answer counts as 'fail' per item must be configurable via the checklist_template_items document (field: nilai_gagal), not hardcoded in application logic, so BBKK admins can adjust thresholds without a new app release."
+  },
+
+  "document_types": {
+    "phqc": {
+      "full_name": "PHQC (Port Health Quarantine Clearance)",
+      "issued_for": "kapal only",
+      "condition": "submission status reaches `final` (staf_bbkk approved) for a kapal submission"
+    },
+    "berkas_verifikasi": {
+      "full_name": "Berkas Verifikasi",
+      "issued_for": "pesawat only -- aircraft never receive a PHQC",
+      "condition": "submission status reaches `final` (staf_bbkk approved) for a pesawat submission"
+    }
+  },
+
+  "data_models": {
+    "users": {
+      "id": "string (PK, = Firebase Auth uid)",
+      "nama": "string",
+      "role": "enum: kepala_kapal | kepala_penerbangan | staf_bbkk | validator_admin",
+      "phone": "string",
+      "id_number": "string (KTP/Paspor/lisensi -- mainly for kepala roles)",
+      "signature_url": "string (Storage path to the permanent signature image)",
+      "pin_hash": "string (never store the raw PIN)",
+      "dibuat_oleh": "string (FK -> users.id, nullable; who created this account -- e.g. admin or a staf_bbkk)",
+      "created_at": "timestamp"
+    },
+    "checklist_templates": {
+      "id": "string (PK)",
+      "moda_transportasi": "enum: kapal | pesawat",
+      "nama_template": "string",
+      "versi": "number",
+      "is_active": "boolean"
+    },
+    "checklist_template_items": {
+      "id": "string (PK)",
+      "template_id": "string (FK -> checklist_templates.id)",
+      "kategori": "string (e.g. 'B-Higiene', 'C-Vektor', or an item number for pesawat)",
+      "label": "string",
+      "tipe_input": "enum: binary | three_level | multi_choice | numeric | text",
+      "nilai_gagal": "string or array (which answer value(s) count as failing)",
+      "auto_reject_on_fail": "boolean",
+      "requires_media_on_fail": "boolean",
+      "order": "number"
+    },
+    "submissions": {
+      "id": "string (PK)",
+      "moda_transportasi": "enum: kapal | pesawat",
+      "template_id": "string (FK -> checklist_templates.id)",
+      "data_umum": "object (JSON matching the fields defined per template, see checklist_system.templates.*.data_umum_fields)",
+      "pengisi_id": "string (FK -> users.id, role=kepala_kapal or kepala_penerbangan -- the self-declaring crew member)",
+      "verifikator_id": "string (FK -> users.id, role=staf_bbkk, nullable until reviewed)",
+      "status": "enum: draft | ditolak_otomatis | menunggu_verifikasi_staf | ditolak_staf | final",
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    },
+    "submission_answers": {
+      "id": "string (PK)",
+      "submission_id": "string (FK -> submissions.id)",
+      "template_item_id": "string (FK -> checklist_template_items.id)",
+      "nilai_jawaban": "string",
+      "alasan": "string (nullable, required when nilai_jawaban is a fail value)",
+      "status_gagal": "boolean"
+    },
+    "submission_answer_media": {
+      "id": "string (PK)",
+      "answer_id": "string (FK -> submission_answers.id)",
+      "tipe": "enum: foto | video",
+      "file_url": "string (Storage path)",
+      "gps": "geopoint",
+      "timestamp": "timestamp"
+    },
+    "document_signatures": {
+      "id": "string (PK)",
+      "submission_id": "string (FK -> submissions.id)",
+      "user_id": "string (FK -> users.id)",
+      "role_saat_ttd": "enum: pengisi | verifikator",
+      "waktu_ttd": "timestamp"
+    },
+    "dokumen_hasil": {
+      "id": "string (PK)",
+      "submission_id": "string (FK -> submissions.id, 1:1)",
+      "jenis_dokumen": "enum: phqc | berkas_verifikasi (derived automatically: phqc if moda_transportasi=kapal, berkas_verifikasi if pesawat)",
+      "file_pdf_url": "string (Storage path)",
+      "status": "enum: draft | final",
+      "tanggal_generate": "timestamp"
+    },
+    "audit_log": {
+      "id": "string (PK)",
+      "user_id": "string (FK -> users.id)",
+      "aksi": "string (e.g. 'submit_declaration', 'approve', 'reject', 'generate_document', 'create_user')",
+      "entitas_terkait": "string (e.g. 'submissions/abc123')",
+      "waktu": "timestamp"
+    }
+  },
+
+  "entity_relationships": [
+    "users (1) -> (N) submissions as pengisi (via pengisi_id)",
+    "users (1) -> (N) submissions as verifikator (via verifikator_id)",
+    "users (1) -> (N) document_signatures",
+    "users (1) -> (N) audit_log",
+    "checklist_templates (1) -> (N) checklist_template_items",
+    "checklist_templates (1) -> (N) submissions",
+    "checklist_template_items (1) -> (N) submission_answers",
+    "submissions (1) -> (N) submission_answers",
+    "submission_answers (1) -> (N) submission_answer_media",
+    "submissions (1) -> (N) document_signatures",
+    "submissions (1) -> (1) dokumen_hasil"
+  ],
+
+  "api_endpoints": {
+    "base_path": "apps/web/app/api",
+    "routes": [
+      { "path": "/submissions", "methods": ["GET", "POST"], "description": "List submissions (filtered) / create a new self-declared submission (called by kepala_kapal or kepala_penerbangan from mobile)." },
+      { "path": "/submissions/{id}", "methods": ["GET", "PATCH"], "description": "Get or update a single submission." },
+      { "path": "/submissions/{id}/evaluate", "methods": ["POST"], "description": "Server-side auto-reject evaluation against the active checklist_template rules. Called right after the kepala submits. Sets status to `ditolak_otomatis` or `menunggu_verifikasi_staf`." },
+      { "path": "/submissions/{id}/verify", "methods": ["POST"], "description": "staf_bbkk's approve/reject decision. This is final and single-stage. Approving triggers automatic document generation. role required: staf_bbkk only." },
+      { "path": "/documents/{submissionId}/generate", "methods": ["POST"], "description": "Internal: composes the final PDF (stamp + pengisi signature + verifikator signature) and sets dokumen_hasil.jenis_dokumen based on moda_transportasi. Called automatically by /verify on approval; not exposed as a manual admin action." },
+      { "path": "/export", "methods": ["GET"], "description": "Export filtered submissions/documents to Excel/CSV/PDF. role required: validator_admin." },
+      { "path": "/users", "methods": ["GET", "POST"], "description": "List users / create a user and set their custom claim role. Admin-only for staf_bbkk and validator_admin account creation." },
+      { "path": "/users/{id}", "methods": ["GET", "PATCH", "DELETE"], "description": "Get/update/deactivate a user." },
+      { "path": "/users/search", "methods": ["GET"], "description": "Search existing accounts by name/phone, used when a staf_bbkk creates a kepala account on-site." },
+      { "path": "/checklist-templates", "methods": ["GET", "POST"], "description": "List / create checklist templates. role required: validator_admin." },
+      { "path": "/checklist-templates/{id}", "methods": ["GET", "PATCH"], "description": "Get/update a template and its items. role required: validator_admin." }
+    ],
+    "auth_rule": "Every route verifies the caller's Firebase ID token and role via firebase-admin before executing. /submissions/{id}/verify is staf_bbkk only. /users (write) and /checklist-templates (write) are validator_admin only. validator_admin has no access to any approve/reject action anywhere in the API."
+  },
+
+  "security_rules_notes": [
+    "Firestore rules: kepala_kapal/kepala_penerbangan can only create/read/update their own submissions (pengisi_id == request.auth.uid) while status is `draft`; they cannot edit a submission once it is no longer `draft`.",
+    "Firestore rules: staf_bbkk can read submissions with status `menunggu_verifikasi_staf` or `ditolak_otomatis`, and can write only to the verify-related fields (status, verifikator_id) -- enforced primarily through the /verify API route, not direct client writes.",
+    "Firestore rules: validator_admin has broad read access for reporting/export, and write access limited to users and checklist_templates collections.",
+    "Storage rules: evidence media (submission_answer_media) is only writable by the owning pengisi while the submission is in `draft`, and read-accessible to staf_bbkk and validator_admin.",
+    "Storage rules: signature images are writable only by the owning user account, and read-only for everyone else (used only server-side when composing PDFs)."
+  ],
+
+  "non_functional_requirements": {
+    "security": [
+      "Role is stored and checked server-side only (custom claims), never trusted from client input.",
+      "Firestore and Storage Security Rules enforce role-based read/write access.",
+      "The signing PIN is verified server-side on every signing action.",
+      "Evidence photos/videos can only be captured via the in-app camera; gallery picking must be disabled for this flow.",
+      "Only staf_bbkk can call /submissions/{id}/verify; the backend must reject this call from any other role even if attempted directly."
+    ],
+    "performance": "Compress photo/video client-side before upload. Target <2s response for standard read operations under normal network conditions.",
+    "connectivity": "The app assumes an active internet connection is available during use. Full offline mode is explicitly out of scope for v1.",
+    "scalability": "New transport modes or form revisions should be achievable purely through checklist_templates data changes, with no app release required.",
+    "auditability": "Every submit, approve, reject, document generation, and master-data change writes an audit_log entry.",
+    "compatibility": "Mobile: Android and iOS from a single Flutter codebase. Web: modern evergreen browsers."
+  },
+
+  "explicitly_out_of_scope_for_v1": [
+    "QR code / session-code based linking between accounts and inspections",
+    "Certified / legally-binding electronic signatures (current signature is a stored image + PIN confirmation only)",
+    "Offline-first mobile support",
+    "Multi-level (cascading) approval workflow -- staf_bbkk's approval is final and single-stage; validator_admin has no approval role at all"
+  ],
+
+  "glossary": {
+    "kepala_kapal": "Ship captain (Nahkoda). Self-declares the ship's full sanitation form.",
+    "kepala_penerbangan": "Pilot / aircraft captain. Self-declares the aircraft's full sanitation form.",
+    "staf_bbkk": "BBKK staff who reviews self-declared submissions and gives the final approve/reject decision.",
+    "validator_admin": "BBKK staff who administers the system on the web app: users, templates, exports, audit logs. Does not approve/reject submissions.",
+    "ditolak_otomatis": "Auto-rejected: the system rejected the submission automatically because at least one checklist item failed. This is informational only for staf_bbkk.",
+    "menunggu_verifikasi_staf": "Awaiting staf_bbkk's review, because all checklist items passed automatic evaluation.",
+    "ditolak_staf": "staf_bbkk manually rejected the submission after review.",
+    "final": "staf_bbkk approved the submission; the resulting document (PHQC or Berkas Verifikasi) has been generated.",
+    "phqc": "Port Health Quarantine Clearance -- the official document issued only for approved ship (kapal) submissions.",
+    "berkas_verifikasi": "Generic verification document issued for approved aircraft (pesawat) submissions; aircraft never receive a PHQC.",
+    "moda_transportasi": "Transport mode: kapal (ship) or pesawat (aircraft)."
+  }
+}

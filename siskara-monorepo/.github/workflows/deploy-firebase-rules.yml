@@ -1,0 +1,29 @@
+name: Deploy Firebase Rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firebase/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firebase
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy Firestore Rules
+        run: firebase deploy --only firestore:rules --project bbkk-9d446 --token ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Deploy Firestore Indexes
+        run: firebase deploy --only firestore:indexes --project bbkk-9d446 --token ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Deploy Storage Rules
+        run: firebase deploy --only storage --project bbkk-9d446 --token ${{ secrets.FIREBASE_TOKEN }}

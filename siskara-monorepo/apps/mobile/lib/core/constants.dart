@@ -1,0 +1,60 @@
+/// Application-wide constants for SISKARA
+class AppConstants {
+  AppConstants._();
+
+  // ─── App Info ───────────────────────────────────────────
+  static const String appName = 'SISKARA';
+  static const String appFullName =
+      'Sistem Skrining dan Pemeriksaan Kesehatan Kapal dan Pesawat Udara';
+  static const String clientName =
+      'Balai Besar Kekarantinaan Kesehatan (BBKK) Makassar';
+  static const String ministry = 'Kementerian Kesehatan RI';
+
+  // ─── Firebase Collections ──────────────────────────────
+  static const String colUsers = 'users';
+  static const String colChecklistTemplates = 'checklist_templates';
+  static const String colChecklistTemplateItems = 'items'; // subcollection
+  static const String colSubmissions = 'submissions';
+  static const String colSubmissionAnswers = 'answers'; // subcollection
+  static const String colSubmissionAnswerMedia = 'media'; // subcollection
+  static const String colDocumentSignatures = 'document_signatures';
+  static const String colDokumenHasil = 'dokumen_hasil';
+  static const String colAuditLog = 'audit_log';
+
+  // ─── Storage Paths ─────────────────────────────────────
+  static const String storageSignatures = 'signatures';
+  static const String storageSubmissions = 'submissions';
+  static const String storageDocuments = 'documents';
+  static const String storageAssets = 'assets';
+
+  // ─── Roles ─────────────────────────────────────────────
+  static const String roleKepalaKapal = 'kepala_kapal';
+  static const String roleKepalaPenerbangan = 'kepala_penerbangan';
+  static const String roleStafBbkk = 'staf_bbkk';
+  static const String roleValidatorAdmin = 'validator_admin';
+
+  // ─── Transport Modes ───────────────────────────────────
+  static const String modaKapal = 'kapal';
+  static const String modaPesawat = 'pesawat';
+
+  // ─── Submission Statuses ───────────────────────────────
+  static const String statusDraft = 'draft';
+  static const String statusDitolakOtomatis = 'ditolak_otomatis';
+  static const String statusMenungguVerifikasi = 'menunggu_verifikasi_staf';
+  static const String statusDitolakStaf = 'ditolak_staf';
+  static const String statusFinal = 'final';
+
+  // ─── Document Types ────────────────────────────────────
+  static const String docPhqc = 'phqc';
+  static const String docBerkasVerifikasi = 'berkas_verifikasi';
+
+  // ─── Media Constraints ─────────────────────────────────
+  static const int maxPhotoSizeKb = 2048; // 2 MB after compression
+  static const int maxVideoSizeMb = 50;
+  static const int maxVideoDurationSeconds = 60;
+  static const double photoCompressionQuality = 0.7;
+
+  // ─── API Base URL ──────────────────────────────────────
+  // TODO: Replace with actual deployed web app URL
+  static const String apiBaseUrl = 'https://siskara-web.vercel.app/api';
+}
