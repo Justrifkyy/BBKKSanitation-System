@@ -5,13 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
-import '../../../services/auth_service.dart';
 import '../../../services/firestore_service.dart';
 import '../../../services/storage_service.dart';
+import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
 
 class ReviewDetailScreen extends ConsumerStatefulWidget {
-
   const ReviewDetailScreen({super.key, required this.submissionId});
   final String submissionId;
 
@@ -133,8 +132,10 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                             if (index > 0) const Divider(height: 20),
                             _AnswerDetail(
                               answer: review.answers[index],
-                              item: review.items[review.answers[index].templateItemId],
-                              media: review.media[review.answers[index].id] ?? const [],
+                              item: review
+                                  .items[review.answers[index].templateItemId],
+                              media: review.media[review.answers[index].id] ??
+                                  const [],
                             ),
                           ],
                         ],
@@ -150,8 +151,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                       'Checklist menemukan kondisi yang memenuhi kriteria penolakan otomatis.',
                 ),
               ],
-              if (review.submission.status !=
-                  'menunggu_verifikasi_staf') ...[
+              if (review.submission.status != 'menunggu_verifikasi_staf') ...[
                 const SizedBox(height: 14),
                 const _NoticeCard(
                   icon: Icons.visibility_outlined,
@@ -168,8 +168,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
       bottomNavigationBar: FutureBuilder<_ReviewData?>(
         future: _reviewFuture,
         builder: (context, snapshot) {
-          if (snapshot.data?.submission.status !=
-              'menunggu_verifikasi_staf') {
+          if (snapshot.data?.submission.status != 'menunggu_verifikasi_staf') {
             return const SizedBox.shrink();
           }
           return SafeArea(
@@ -253,7 +252,6 @@ extension on FirestoreService {
 }
 
 class _ReviewData {
-
   const _ReviewData({
     required this.submission,
     required this.answers,
@@ -267,14 +265,12 @@ class _ReviewData {
 }
 
 class _ReviewDecision {
-
   const _ReviewDecision(this.pin, this.note);
   final String pin;
   final String? note;
 }
 
 class _ReviewDecisionDialog extends StatefulWidget {
-
   const _ReviewDecisionDialog({required this.decision});
   final String decision;
 
@@ -307,7 +303,9 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
       context,
       _ReviewDecision(
         _pinController.text,
-        _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
       ),
     );
   }
@@ -380,7 +378,6 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
 }
 
 class _SubmissionHeader extends StatelessWidget {
-
   const _SubmissionHeader({required this.submission});
   final SubmissionModel submission;
 
@@ -422,7 +419,8 @@ class _SubmissionHeader extends StatelessWidget {
           const SizedBox(height: 9),
           Text(
             '${submission.isKapal ? 'Kapal' : 'Pesawat'} • ${submission.createdAt.toLocal()}',
-            style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11),
+            style:
+                TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11),
           ),
           const SizedBox(height: 10),
           _StatusChip(status: submission.status),
@@ -433,7 +431,6 @@ class _SubmissionHeader extends StatelessWidget {
 }
 
 class _SectionCard extends StatelessWidget {
-
   const _SectionCard({
     required this.title,
     required this.icon,
@@ -471,7 +468,6 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-
   const _DetailRow({required this.label, required this.value});
   final String label;
   final String value;
@@ -509,7 +505,6 @@ class _DetailRow extends StatelessWidget {
 }
 
 class _AnswerDetail extends StatelessWidget {
-
   const _AnswerDetail({
     required this.answer,
     required this.item,
@@ -536,7 +531,8 @@ class _AnswerDetail extends StatelessWidget {
             Expanded(
               child: Text(
                 item?.label ?? answer.templateItemId,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
               ),
             ),
             const SizedBox(width: 8),
@@ -631,7 +627,6 @@ class _AnswerDetail extends StatelessWidget {
 }
 
 class _EvidenceImage extends StatefulWidget {
-
   const _EvidenceImage({required this.storagePath});
   final String storagePath;
 
@@ -688,7 +683,6 @@ class _EvidenceImageState extends State<_EvidenceImage> {
 }
 
 class _StatusChip extends StatelessWidget {
-
   const _StatusChip({required this.status, this.customLabel});
   final String status;
   final String? customLabel;
@@ -696,8 +690,7 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPending = status == 'menunggu_verifikasi_staf';
-    final isRejected =
-        status == 'ditolak_otomatis' || status == 'ditolak_staf';
+    final isRejected = status == 'ditolak_otomatis' || status == 'ditolak_staf';
     final background = isRejected
         ? SiskaraTheme.error.withOpacity(0.12)
         : isPending
@@ -727,7 +720,6 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _NoticeCard extends StatelessWidget {
-
   const _NoticeCard({
     required this.icon,
     required this.color,
@@ -756,9 +748,12 @@ class _NoticeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+                Text(title,
+                    style:
+                        TextStyle(color: color, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
-                Text(message, style: const TextStyle(fontSize: 11, height: 1.4)),
+                Text(message,
+                    style: const TextStyle(fontSize: 11, height: 1.4)),
               ],
             ),
           ),
@@ -769,7 +764,6 @@ class _NoticeCard extends StatelessWidget {
 }
 
 class _ReviewError extends StatelessWidget {
-
   const _ReviewError({required this.message, this.onRetry});
   final String message;
   final VoidCallback? onRetry;
@@ -782,7 +776,8 @@ class _ReviewError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, size: 48, color: SiskaraTheme.error),
+            const Icon(Icons.cloud_off_outlined,
+                size: 48, color: SiskaraTheme.error),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             if (onRetry != null) ...[
@@ -816,9 +811,8 @@ class _MediaError extends StatelessWidget {
 
 String _displayLabel(String value) => value
     .split('_')
-    .map((part) => part.isEmpty
-        ? part
-        : '${part[0].toUpperCase()}${part.substring(1)}')
+    .map((part) =>
+        part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
     .join(' ');
 
 String _displayValue(dynamic value) {

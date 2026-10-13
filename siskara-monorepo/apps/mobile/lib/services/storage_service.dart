@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../core/constants.dart';
 import 'api_service.dart';
 
 /// Uploads private media to Cloudflare R2 using short-lived API-signed URLs.

@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme.dart';
 import '../../../models/submission_model.dart';
-import '../../../services/auth_service.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
 

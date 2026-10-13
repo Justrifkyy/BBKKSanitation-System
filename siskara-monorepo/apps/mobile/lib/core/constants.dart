@@ -56,6 +56,6 @@ class AppConstants {
   // TODO: Replace with actual deployed web app URL
   static const String apiBaseUrl = String.fromEnvironment(
     'SISKARA_API_BASE_URL',
-    defaultValue: 'https://siskara-web.vercel.app/api',
+    defaultValue: 'https://lycabyte.store/api',
   );
 }

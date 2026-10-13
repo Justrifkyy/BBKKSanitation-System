@@ -11,8 +11,6 @@ import '../../../core/theme.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
 import '../../../models/user_model.dart';
-import '../../../services/auth_service.dart';
-import '../../../services/firestore_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
@@ -107,9 +105,8 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
   String _labelValue(String value) => value
       .split('_')
-      .map((part) => part.isEmpty
-          ? part
-          : '${part[0].toUpperCase()}${part.substring(1)}')
+      .map((part) =>
+          part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
 
   List<String> _optionsFor(ChecklistTemplateItemModel item) {
@@ -137,15 +134,8 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     return labels[value] ?? _labelValue(value);
   }
 
-  bool _isFailure(ChecklistTemplateItemModel item) {
-    final answer = _answerFor(item);
-    return answer.isNotEmpty && item.isFailValue(answer);
-  }
-
   String _answerFor(ChecklistTemplateItemModel item) =>
-      _answers[item.id] ??
-      _controllers['answer_${item.id}']?.text.trim() ??
-      '';
+      _answers[item.id] ?? _controllers['answer_${item.id}']?.text.trim() ?? '';
 
   Map<String, String> _currentAnswers(List<ChecklistTemplateItemModel> items) {
     return {
@@ -645,12 +635,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
   Widget _buildChecklistItem(ChecklistTemplateItemModel item) {
     final selected = _answers[item.id];
-    final failed = _isFailure(item);
     final answer = _answerFor(item);
-    final requiresReason =
-        answer.isNotEmpty && item.requiresReasonFor(answer);
-    final requiresMedia =
-        answer.isNotEmpty && item.requiresMediaFor(answer);
+    final requiresReason = answer.isNotEmpty && item.requiresReasonFor(answer);
+    final requiresMedia = answer.isNotEmpty && item.requiresMediaFor(answer);
     final options = _optionsFor(item);
     final evidence = _evidence[item.id];
     final position = _positions[item.id];
@@ -777,10 +764,10 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 hintText: 'Jelaskan kondisi yang ditemukan',
                 alignLabelWithHint: true,
               ),
-              validator: (value) => requiresReason &&
-                      (value == null || value.trim().isEmpty)
-                  ? 'Alasan wajib diisi untuk temuan.'
-                  : null,
+              validator: (value) =>
+                  requiresReason && (value == null || value.trim().isEmpty)
+                      ? 'Alasan wajib diisi untuk temuan.'
+                      : null,
             ),
           ],
           if (requiresMedia) ...[
@@ -793,7 +780,8 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                         ? null
                         : () => _captureEvidence(item, video: false),
                     icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                    label: Text(evidence == null ? 'Ambil foto' : 'Ulangi foto'),
+                    label:
+                        Text(evidence == null ? 'Ambil foto' : 'Ulangi foto'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -851,7 +839,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 }
 
 class _GeneralField {
-
   const _GeneralField(
     this.name,
     this.label, {
@@ -867,7 +854,6 @@ class _GeneralField {
 }
 
 class _WelcomeCard extends StatelessWidget {
-
   const _WelcomeCard({
     required this.name,
     required this.isKapal,
@@ -943,7 +929,6 @@ class _WelcomeCard extends StatelessWidget {
 }
 
 class _FormSectionTitle extends StatelessWidget {
-
   const _FormSectionTitle({
     required this.number,
     required this.title,
@@ -997,7 +982,6 @@ class _FormSectionTitle extends StatelessWidget {
 }
 
 class _SurfaceCard extends StatelessWidget {
-
   const _SurfaceCard({required this.child});
   final Widget child;
 
@@ -1017,7 +1001,6 @@ class _SurfaceCard extends StatelessWidget {
 }
 
 class _CategoryHeader extends StatelessWidget {
-
   const _CategoryHeader({required this.title});
   final String title;
 
@@ -1069,7 +1052,6 @@ class _DeclarationNotice extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-
   const _EmptyState({
     required this.icon,
     required this.title,
@@ -1087,7 +1069,8 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 58, color: SiskaraTheme.primaryBlue.withOpacity(0.55)),
+            Icon(icon,
+                size: 58, color: SiskaraTheme.primaryBlue.withOpacity(0.55)),
             const SizedBox(height: 15),
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 7),
@@ -1107,7 +1090,6 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-
   const _ErrorState({required this.message, required this.onRetry});
   final String message;
   final VoidCallback onRetry;
@@ -1120,7 +1102,8 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, size: 48, color: SiskaraTheme.error),
+            const Icon(Icons.cloud_off_outlined,
+                size: 48, color: SiskaraTheme.error),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),

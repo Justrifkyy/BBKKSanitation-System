@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:signature/signature.dart';
 
 import '../../../core/theme.dart';
-import '../../../services/auth_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../state/auth_state.dart';
 
