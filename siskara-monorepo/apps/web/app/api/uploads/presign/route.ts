@@ -17,6 +17,10 @@ const evidenceTypes: Record<string, string> = {
   "video/mp4": "mp4",
   "video/quicktime": "mov",
 };
+const signatureTypes: Record<string, string> = {
+  "image/png": "png",
+  "image/svg+xml": "svg",
+};
 
 export async function POST(request: NextRequest) {
   const authResult = await verifyAuth(request, [
@@ -49,9 +53,11 @@ export async function POST(request: NextRequest) {
       authResult.user.role === "kepala_penerbangan" ||
       authResult.user.role === "staf_bbkk"
     ) {
-      if (contentType !== "image/png" || size > MAX_SIGNATURE_BYTES) {
+      const extension =
+        typeof contentType === "string" ? signatureTypes[contentType] : null;
+      if (!extension || size > MAX_SIGNATURE_BYTES) {
         return NextResponse.json(
-          { error: "Tanda tangan harus PNG dengan ukuran maksimal 512 KB." },
+          { error: "Tanda tangan harus PNG atau SVG dengan ukuran maksimal 512 KB." },
           { status: 400 },
         );
       }
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const key = `staging/signatures/${authResult.user.uid}/${randomUUID()}.png`;
+      const key = `staging/signatures/${authResult.user.uid}/${randomUUID()}.${extension}`;
       return NextResponse.json({
         upload_url: await createUploadUrl(key, {
           contentLength: size,

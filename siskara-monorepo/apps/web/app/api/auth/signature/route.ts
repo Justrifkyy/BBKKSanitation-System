@@ -7,8 +7,29 @@ import {
   headObject,
   parseStoragePath,
   promoteObject,
+  readObjectBytes,
   storagePath,
 } from "@/lib/r2";
+
+function isValidSignatureSvg(bytes: Uint8Array): boolean {
+  let content: string;
+  try {
+    content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return false;
+  }
+
+  const svg = content
+    .replace(/^\uFEFF/, "")
+    .replace(/^<\?xml[^>]*>\s*/i, "")
+    .trim();
+  return (
+    /^<svg(?:\s|>)[\s\S]*<\/svg>$/i.test(svg) &&
+    !/<!DOCTYPE|<!ENTITY|<\s*(?:script|style|foreignObject|iframe|object|embed|image)\b|\bon[a-z]+\s*=|\b(?:href|xlink:href)\s*=|url\s*\(|javascript:/i.test(
+      svg,
+    )
+  );
+}
 
 export async function POST(request: NextRequest) {
   const authResult = await verifyAuth(request, [
@@ -28,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   const filePath = parseStoragePath(body.signature_url);
   const uploadMatch = filePath?.match(
-    /^staging\/signatures\/([A-Za-z0-9_-]+)\/([0-9a-f-]{36})\.png$/i,
+    /^staging\/signatures\/([A-Za-z0-9_-]+)\/([0-9a-f-]{36})\.(png|svg)$/i,
   );
   if (!filePath || !uploadMatch || uploadMatch[1] !== authResult.user.uid) {
     return NextResponse.json(
@@ -38,15 +59,33 @@ export async function POST(request: NextRequest) {
   }
 
   const uploadedObject = await headObject(filePath);
+  const extension = uploadMatch[3].toLowerCase();
+  const expectedContentType =
+    extension === "png" ? "image/png" : "image/svg+xml";
   if (
     !uploadedObject ||
-    uploadedObject.ContentType !== "image/png" ||
+    uploadedObject.ContentType !== expectedContentType ||
     (uploadedObject.ContentLength ?? 0) <= 0 ||
     (uploadedObject.ContentLength ?? Infinity) > 512 * 1024
   ) {
     return NextResponse.json(
       { error: "Berkas tanda tangan belum diunggah atau tidak valid." },
       { status: 404 },
+    );
+  }
+  const uploadedBytes = await readObjectBytes(filePath);
+  const hasValidContent =
+    extension === "png"
+      ? uploadedBytes != null &&
+        uploadedBytes.length >= 8 &&
+        Buffer.from(uploadedBytes.subarray(0, 8)).equals(
+          Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        )
+      : uploadedBytes != null && isValidSignatureSvg(uploadedBytes);
+  if (!hasValidContent) {
+    return NextResponse.json(
+      { error: "Isi file tanda tangan tidak sesuai format PNG atau SVG." },
+      { status: 400 },
     );
   }
 
@@ -66,7 +105,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const permanentKey = `signatures/${authResult.user.uid}/${uploadMatch[2]}.png`;
+  const permanentKey = `signatures/${authResult.user.uid}/${uploadMatch[2]}.${extension}`;
   await promoteObject(filePath, permanentKey);
   const signatureUrl = storagePath(permanentKey);
   try {

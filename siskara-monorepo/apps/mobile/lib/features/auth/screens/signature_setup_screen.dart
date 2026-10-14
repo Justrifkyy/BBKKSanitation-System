@@ -1,5 +1,7 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signature/signature.dart';
 
@@ -23,6 +25,9 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
     penColor: SiskaraTheme.textPrimary,
     exportBackgroundColor: Colors.white,
   );
+  Uint8List? _uploadedSignature;
+  String? _uploadedSignatureName;
+  String? _uploadedSignatureContentType;
   bool _isSaving = false;
 
   @override
@@ -42,7 +47,9 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
 
     final needsSignature = !user.hasSignature;
     final needsPin = !user.hasPin;
-    if (needsSignature && _signatureController.points.isEmpty) {
+    if (needsSignature &&
+        _uploadedSignature == null &&
+        _signatureController.points.isEmpty) {
       _showMessage('Buat tanda tangan pada area yang tersedia.');
       return;
     }
@@ -63,12 +70,16 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
       final authService = ref.read(authServiceProvider);
 
       if (needsSignature) {
-        final bytes = await _signatureController.toPngBytes();
+        final bytes =
+            _uploadedSignature ?? await _signatureController.toPngBytes();
         if (bytes == null || bytes.isEmpty) {
           throw StateError('Tanda tangan tidak dapat diproses. Coba gambar ulang.');
         }
-        final signatureUrl =
-            await storageService.uploadSignatureBytes(user.id, bytes);
+        final signatureUrl = await storageService.uploadSignatureBytes(
+          user.id,
+          bytes,
+          contentType: _uploadedSignatureContentType ?? 'image/png',
+        );
         await authService.updateSignature(user.id, signatureUrl);
       }
 
@@ -84,6 +95,82 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  Future<void> _pickSignature() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['png', 'svg'],
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        _showMessage('File tidak dapat dibaca. Silakan pilih file lain.');
+        return;
+      }
+      if (bytes.length > 512 * 1024) {
+        _showMessage('Ukuran tanda tangan maksimal 512 KB.');
+        return;
+      }
+
+      final extension = file.extension?.toLowerCase();
+      final contentType = switch (extension) {
+        'png' when _hasPngSignature(bytes) => 'image/png',
+        'svg' when _looksLikeSvg(bytes) => 'image/svg+xml',
+        _ => null,
+      };
+      if (contentType == null) {
+        _showMessage('Isi file tidak sesuai dengan format PNG atau SVG.');
+        return;
+      }
+
+      setState(() {
+        _uploadedSignature = bytes;
+        _uploadedSignatureName = file.name;
+        _uploadedSignatureContentType = contentType;
+      });
+    } on PlatformException catch (error) {
+      _showMessage('Tidak dapat membuka pemilih file: ${error.message}');
+    } catch (error) {
+      _showMessage('Tidak dapat memilih tanda tangan: $error');
+    }
+  }
+
+  static bool _hasPngSignature(Uint8List bytes) =>
+      bytes.length >= 8 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4e &&
+      bytes[3] == 0x47 &&
+      bytes[4] == 0x0d &&
+      bytes[5] == 0x0a &&
+      bytes[6] == 0x1a &&
+      bytes[7] == 0x0a;
+
+  static bool _looksLikeSvg(Uint8List bytes) {
+    final text = String.fromCharCodes(bytes).trimLeft();
+    final withoutDeclaration = text.replaceFirst(
+      RegExp(r'^<\?xml[^>]*>\s*', caseSensitive: false),
+      '',
+    );
+    return RegExp(r'^<svg(?:\s|>)', caseSensitive: false)
+            .hasMatch(withoutDeclaration) &&
+        RegExp(r'</svg>\s*$', caseSensitive: false)
+            .hasMatch(withoutDeclaration) &&
+        !RegExp(
+          r'<script\b|<foreignObject\b|\bon[a-z]+\s*=|javascript:|<!DOCTYPE',
+          caseSensitive: false,
+        ).hasMatch(withoutDeclaration);
+  }
+
+  Future<void> _signOut() async {
+    await ref.read(authServiceProvider).signOut();
+    if (mounted) context.go('/login');
   }
 
   void _showMessage(String message) {
@@ -103,11 +190,12 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
         title: const Text('Keamanan akun'),
         automaticallyImplyLeading: false,
         actions: [
-          IconButton(
-            tooltip: 'Keluar',
-            onPressed: () => ref.read(authServiceProvider).signOut(),
+          TextButton.icon(
+            onPressed: _isSaving ? null : _signOut,
             icon: const Icon(Icons.logout),
+            label: const Text('Keluar'),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
@@ -154,13 +242,42 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
                         backgroundColor: Colors.white,
                       ),
                     ),
+                    if (_uploadedSignature != null) ...[
+                      const SizedBox(height: 8),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.verified_outlined),
+                        title: Text(_uploadedSignatureName ?? 'Tanda tangan'),
+                        subtitle: Text(
+                          _uploadedSignatureContentType == 'image/svg+xml'
+                              ? 'SVG siap diunggah'
+                              : 'PNG siap diunggah',
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Hapus file pilihan',
+                          onPressed: () => setState(() {
+                            _uploadedSignature = null;
+                            _uploadedSignatureName = null;
+                            _uploadedSignatureContentType = null;
+                          }),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ),
+                    ],
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
-                        onPressed: _signatureController.clear,
+                        onPressed: _uploadedSignature == null
+                            ? _signatureController.clear
+                            : null,
                         icon: const Icon(Icons.refresh, size: 17),
                         label: const Text('Ulangi'),
                       ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _isSaving ? null : _pickSignature,
+                      icon: const Icon(Icons.upload_file_outlined),
+                      label: const Text('Pilih file PNG atau SVG'),
                     ),
                   ] else ...[
                     const SizedBox(height: 18),

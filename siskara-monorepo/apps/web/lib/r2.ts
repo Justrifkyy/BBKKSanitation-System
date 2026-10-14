@@ -134,3 +134,12 @@ export async function headObject(
     throw error;
   }
 }
+
+export async function readObjectBytes(key: string): Promise<Uint8Array | null> {
+  const { bucket } = getR2Config();
+  const response = await getClient().send(
+    new GetObjectCommand({ Bucket: bucket, Key: key }),
+  );
+  if (!response.Body) return null;
+  return new Uint8Array(await response.Body.transformToByteArray());
+}

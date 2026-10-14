@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
   const isPrivileged =
     authResult.user.role === "staf_bbkk" ||
     authResult.user.role === "validator_admin";
-  const signatureMatch = key.match(/^signatures\/([A-Za-z0-9_-]+)\/signature\.png$/);
+  const signatureMatch = key.match(
+    /^signatures\/([A-Za-z0-9_-]+)\/(?:signature\.png|[0-9a-f-]{36}\.(?:png|svg))$/i,
+  );
   if (signatureMatch) {
     if (!isPrivileged && signatureMatch[1] !== authResult.user.uid) {
       return NextResponse.json(

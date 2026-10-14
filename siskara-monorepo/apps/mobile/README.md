@@ -46,6 +46,11 @@ Release builds do not enable this setting. For a physical Android phone, use
 the computer's reachable LAN IP instead of `10.0.2.2`, and ensure the phone can
 reach port 3000.
 
+During account security setup, users can draw a signature in the app or select
+a PNG/SVG file up to 512 KB. The API validates the uploaded file type before it
+is saved to private object storage. The **Keluar** action returns to the login
+screen without saving the setup.
+
 Firebase initialization uses generated platform options. To reconfigure the
 Android app after changing its application ID, run from this directory:
 

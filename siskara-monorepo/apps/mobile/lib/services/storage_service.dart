@@ -10,24 +10,34 @@ import 'api_service.dart';
 class StorageService {
   final ApiService _api = ApiService();
 
-  Future<String> uploadSignatureBytes(String userId, Uint8List bytes) async {
+  Future<String> uploadSignatureBytes(
+    String userId,
+    Uint8List bytes, {
+    String contentType = 'image/png',
+  }) async {
+    if (contentType != 'image/png' && contentType != 'image/svg+xml') {
+      throw const ApiException('Tanda tangan harus berupa file PNG atau SVG.');
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.uid != userId) {
-      throw const ApiException('Sesi pengguna berakhir. Silakan masuk kembali.');
+      throw const ApiException(
+          'Sesi pengguna berakhir. Silakan masuk kembali.');
     }
     final token = await user.getIdToken();
     if (token == null) {
-      throw const ApiException('Sesi pengguna tidak valid. Silakan masuk kembali.');
+      throw const ApiException(
+          'Sesi pengguna tidak valid. Silakan masuk kembali.');
     }
 
     return _upload(
       token: token,
       body: {
         'purpose': 'signature',
-        'content_type': 'image/png',
+        'content_type': contentType,
         'size': bytes.length,
       },
-      contentType: 'image/png',
+      contentType: contentType,
       contentLength: bytes.length,
       content: Stream<List<int>>.value(bytes),
     );
@@ -41,11 +51,13 @@ class StorageService {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw const ApiException('Sesi pengguna berakhir. Silakan masuk kembali.');
+      throw const ApiException(
+          'Sesi pengguna berakhir. Silakan masuk kembali.');
     }
     final token = await user.getIdToken();
     if (token == null) {
-      throw const ApiException('Sesi pengguna tidak valid. Silakan masuk kembali.');
+      throw const ApiException(
+          'Sesi pengguna tidak valid. Silakan masuk kembali.');
     }
 
     final length = await file.length();
@@ -67,11 +79,13 @@ class StorageService {
   Future<String> getDownloadUrl(String storagePath) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw const ApiException('Sesi pengguna berakhir. Silakan masuk kembali.');
+      throw const ApiException(
+          'Sesi pengguna berakhir. Silakan masuk kembali.');
     }
     final token = await user.getIdToken();
     if (token == null) {
-      throw const ApiException('Sesi pengguna tidak valid. Silakan masuk kembali.');
+      throw const ApiException(
+          'Sesi pengguna tidak valid. Silakan masuk kembali.');
     }
 
     final result = await _api.post(
@@ -81,7 +95,8 @@ class StorageService {
     );
     final url = result['download_url'];
     if (url is! String || Uri.tryParse(url)?.scheme != 'https') {
-      throw const ApiException('Server memberikan tautan berkas yang tidak valid.');
+      throw const ApiException(
+          'Server memberikan tautan berkas yang tidak valid.');
     }
     return url;
   }
@@ -95,11 +110,13 @@ class StorageService {
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw const ApiException('Sesi pengguna berakhir. Silakan masuk kembali.');
+      throw const ApiException(
+          'Sesi pengguna berakhir. Silakan masuk kembali.');
     }
     final token = await user.getIdToken();
     if (token == null) {
-      throw const ApiException('Sesi pengguna tidak valid. Silakan masuk kembali.');
+      throw const ApiException(
+          'Sesi pengguna tidak valid. Silakan masuk kembali.');
     }
 
     await _api.post(
@@ -132,7 +149,8 @@ class StorageService {
     if (uploadUrl is! String ||
         storagePath is! String ||
         Uri.tryParse(uploadUrl)?.scheme != 'https') {
-      throw const ApiException('Server memberikan URL unggah yang tidak valid.');
+      throw const ApiException(
+          'Server memberikan URL unggah yang tidak valid.');
     }
 
     final client = HttpClient()
