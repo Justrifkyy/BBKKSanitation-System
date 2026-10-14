@@ -73,7 +73,8 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
         final bytes =
             _uploadedSignature ?? await _signatureController.toPngBytes();
         if (bytes == null || bytes.isEmpty) {
-          throw StateError('Tanda tangan tidak dapat diproses. Coba gambar ulang.');
+          throw StateError(
+              'Tanda tangan tidak dapat diproses. Coba gambar ulang.');
         }
         final signatureUrl = await storageService.uploadSignatureBytes(
           user.id,
@@ -99,7 +100,7 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
 
   Future<void> _pickSignature() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['png', 'svg'],
         allowMultiple: false,
@@ -347,7 +348,8 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
                               ),
                             )
                           : const Icon(Icons.arrow_forward),
-                      label: Text(_isSaving ? 'Menyimpan...' : 'Simpan dan lanjutkan'),
+                      label: Text(
+                          _isSaving ? 'Menyimpan...' : 'Simpan dan lanjutkan'),
                     ),
                   ),
                 ],
@@ -375,7 +377,6 @@ class _SetupProgress extends StatelessWidget {
 }
 
 class _SectionHeading extends StatelessWidget {
-
   const _SectionHeading({required this.number, required this.title});
   final String number;
   final String title;
@@ -404,7 +405,6 @@ class _SectionHeading extends StatelessWidget {
 }
 
 class _InfoBanner extends StatelessWidget {
-
   const _InfoBanner({required this.icon, required this.message});
   final IconData icon;
   final String message;
