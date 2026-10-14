@@ -8,7 +8,11 @@ import '../features/submission/screens/submission_form_screen.dart';
 import '../features/review/screens/review_queue_screen.dart';
 import '../features/review/screens/review_detail_screen.dart';
 import '../features/history/screens/history_screen.dart';
+import '../features/profile/screens/profile_screen.dart';
+import '../features/dashboard/screens/dashboard_screen.dart';
 import '../features/auth/screens/unsupported_role_screen.dart';
+import '../features/auth/screens/auth_error_screen.dart';
+import 'widgets/route_error_screen.dart';
 import '../state/auth_state.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -17,31 +21,45 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/login',
     debugLogDiagnostics: true,
+    errorBuilder: (context, state) => RouteErrorScreen(
+      error: state.error ?? Exception('Route error'),
+    ),
     redirect: (context, state) {
       final profile = authState.valueOrNull;
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
 
+      if (authState.hasError) {
+        return state.matchedLocation == '/account-error'
+            ? null
+            : '/account-error';
+      }
       if (profile == null) return isAuthRoute ? null : '/login';
       if (profile.isAdmin || (!profile.isKepala && !profile.isStaf)) {
         return '/unsupported';
       }
-      if (!profile.hasSignature || !profile.hasPin) {
+      final isSignatureUpdate =
+          state.uri.queryParameters['update'] == 'true';
+      if ((!profile.hasSignature || !profile.hasPin) &&
+          !isSignatureUpdate) {
         return state.matchedLocation == '/signature-setup'
             ? null
             : '/signature-setup';
       }
-      if (isAuthRoute) return profile.isStaf ? '/review' : '/submission';
+      if (isAuthRoute) return '/dashboard';
       if (
           state.matchedLocation == '/signature-setup' &&
           profile.hasSignature &&
-          profile.hasPin) {
-        return profile.isStaf ? '/review' : '/submission';
+          profile.hasPin &&
+          !isSignatureUpdate) {
+        return '/dashboard';
       }
       if (profile.isKepala &&
           ![
+            '/dashboard',
             '/submission',
             '/history',
+            '/profile',
             '/signature-setup',
             '/unsupported',
           ].contains(state.matchedLocation)) {
@@ -49,8 +67,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (profile.isStaf &&
           ![
+            '/dashboard',
             '/review',
             '/history',
+            '/profile',
             '/signature-setup',
             '/unsupported',
           ].contains(state.matchedLocation) &&
@@ -60,6 +80,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+    GoRoute(
+      path: '/account-error',
+      builder: (context, state) => const AuthErrorScreen(),
+    ),
       // ─── Auth Routes ─────────────────────────────────
       GoRoute(
         path: '/login',
@@ -76,6 +100,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/unsupported',
         builder: (context, state) => const UnsupportedRoleScreen(),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const DashboardScreen(),
       ),
 
       // ─── Kepala (Ship/Aircraft) Routes ───────────────
@@ -100,6 +128,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/history',
         builder: (context, state) => const HistoryScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
       ),
     ],
   );

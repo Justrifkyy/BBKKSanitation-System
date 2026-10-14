@@ -71,6 +71,8 @@ class ApiService {
       }
 
       return payload;
+    } on ApiException {
+      rethrow;
     } on SocketException {
       throw const ApiException(
         'Tidak dapat terhubung ke server SISKARA. Periksa koneksi internet.',
@@ -78,6 +80,10 @@ class ApiService {
     } on TimeoutException {
       throw const ApiException(
         'Server SISKARA tidak merespons. Silakan coba lagi.',
+      );
+    } on HttpException {
+      throw const ApiException(
+        'Respons server tidak dapat diproses. Silakan coba kembali.',
       );
     } finally {
       client.close(force: true);

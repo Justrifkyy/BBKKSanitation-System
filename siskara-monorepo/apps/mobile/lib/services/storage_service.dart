@@ -22,12 +22,14 @@ class StorageService {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.uid != userId) {
       throw const ApiException(
-          'Sesi pengguna berakhir. Silakan masuk kembali.');
+        'Sesi pengguna berakhir. Silakan masuk kembali.',
+      );
     }
     final token = await user.getIdToken();
     if (token == null) {
       throw const ApiException(
-          'Sesi pengguna tidak valid. Silakan masuk kembali.');
+        'Sesi pengguna tidak valid. Silakan masuk kembali.',
+      );
     }
 
     return _upload(
@@ -169,6 +171,7 @@ class StorageService {
         await response.drain<void>();
         throw ApiException(
           'Unggah ke penyimpanan berkas gagal (${response.statusCode}).',
+          statusCode: response.statusCode,
         );
       }
       await response.drain<void>();

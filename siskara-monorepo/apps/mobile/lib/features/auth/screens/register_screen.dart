@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
+import '../../../core/error_message.dart';
 import '../../../state/auth_state.dart';
-import '../../../services/api_service.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -62,7 +62,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              e is ApiException ? e.message : 'Registrasi gagal. Silakan coba lagi.',
+              ErrorMessage.from(
+                e,
+                fallback: 'Registrasi gagal. Periksa data lalu coba kembali.',
+              ),
             ),
             backgroundColor: SiskaraTheme.error,
           ),

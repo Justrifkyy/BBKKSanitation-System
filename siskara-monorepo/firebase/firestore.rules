@@ -209,5 +209,10 @@ service cloud.firestore {
     match /user_security/{userId} {
       allow read, write: if false;
     }
+
+    // Signature bytes are stored privately and accessed only through trusted APIs.
+    match /user_signatures/{userId} {
+      allow read, write: if false;
+    }
   }
 }

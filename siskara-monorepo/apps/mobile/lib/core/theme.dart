@@ -6,17 +6,17 @@ class SiskaraTheme {
   SiskaraTheme._();
 
   // ─── Brand Colors ───────────────────────────────────────
-  static const Color primaryBlue = Color(0xFF1565C0);
-  static const Color primaryDark = Color(0xFF0D47A1);
-  static const Color primaryLight = Color(0xFF42A5F5);
-  static const Color accentTeal = Color(0xFF00897B);
-  static const Color accentGold = Color(0xFFFFA726);
+  static const Color primaryBlue = Color(0xFF176B66);
+  static const Color primaryDark = Color(0xFF0B3F48);
+  static const Color primaryLight = Color(0xFF63B6A9);
+  static const Color accentTeal = Color(0xFF2D8C78);
+  static const Color accentGold = Color(0xFFD69B35);
 
   // ─── Semantic Colors ────────────────────────────────────
-  static const Color success = Color(0xFF2E7D32);
-  static const Color warning = Color(0xFFF57F17);
-  static const Color error = Color(0xFFC62828);
-  static const Color info = Color(0xFF1565C0);
+  static const Color success = Color(0xFF25734D);
+  static const Color warning = Color(0xFF9A6400);
+  static const Color error = Color(0xFFB93838);
+  static const Color info = Color(0xFF176B66);
 
   // ─── Status Colors (submission flow) ────────────────────
   static const Color statusDraft = Color(0xFF78909C);
@@ -26,15 +26,15 @@ class SiskaraTheme {
   static const Color statusFinal = Color(0xFF2E7D32);
 
   // ─── Neutrals ───────────────────────────────────────────
-  static const Color backgroundLight = Color(0xFFF5F7FA);
+  static const Color backgroundLight = Color(0xFFF3F7F6);
   static const Color surfaceLight = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF1A1A2E);
-  static const Color textSecondary = Color(0xFF546E7A);
-  static const Color divider = Color(0xFFE0E0E0);
+  static const Color textPrimary = Color(0xFF172B36);
+  static const Color textSecondary = Color(0xFF52666D);
+  static const Color divider = Color(0xFFDCE6E4);
 
   // Dark mode
-  static const Color backgroundDark = Color(0xFF121212);
-  static const Color surfaceDark = Color(0xFF1E1E2E);
+  static const Color backgroundDark = Color(0xFF101B1C);
+  static const Color surfaceDark = Color(0xFF192729);
   static const Color textPrimaryDark = Color(0xFFE0E0E0);
   static const Color textSecondaryDark = Color(0xFF9E9E9E);
 
@@ -56,6 +56,8 @@ class SiskaraTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       brightness: Brightness.light,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryBlue,
@@ -72,26 +74,52 @@ class SiskaraTheme {
         displayColor: textPrimary,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: primaryBlue,
+        backgroundColor: primaryDark,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        toolbarHeight: 54,
         titleTextStyle: GoogleFonts.inter(
-          fontSize: 18,
+          fontSize: 16,
           fontWeight: FontWeight.w600,
           color: Colors.white,
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surfaceLight,
+        height: 64,
+        indicatorColor: primaryBlue.withValues(alpha: 0.12),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMd),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          minimumSize: const Size(0, 42),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          minimumSize: const Size(0, 42),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
           textStyle: GoogleFonts.inter(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -99,7 +127,8 @@ class SiskaraTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryBlue,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          minimumSize: const Size(0, 40),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
@@ -109,7 +138,7 @@ class SiskaraTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
           borderSide: const BorderSide(color: divider),
@@ -131,11 +160,11 @@ class SiskaraTheme {
       ),
       cardTheme: CardThemeData(
         color: surfaceLight,
-        elevation: 2,
+        elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusLg),
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       ),
       dividerTheme: const DividerThemeData(
         color: divider,
@@ -154,6 +183,8 @@ class SiskaraTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryBlue,
@@ -170,26 +201,42 @@ class SiskaraTheme {
         displayColor: textPrimaryDark,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: surfaceDark,
+        backgroundColor: primaryDark,
         foregroundColor: textPrimaryDark,
         elevation: 0,
         centerTitle: true,
+        toolbarHeight: 54,
         titleTextStyle: GoogleFonts.inter(
-          fontSize: 18,
+          fontSize: 16,
           fontWeight: FontWeight.w600,
           color: textPrimaryDark,
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surfaceDark,
+        height: 64,
+        indicatorColor: primaryLight.withValues(alpha: 0.18),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+            color: textPrimaryDark,
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryLight,
           foregroundColor: backgroundDark,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          minimumSize: const Size(0, 42),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
           textStyle: GoogleFonts.inter(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -197,7 +244,7 @@ class SiskaraTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceDark,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
           borderSide: BorderSide(color: Colors.grey[700]!),
@@ -215,11 +262,11 @@ class SiskaraTheme {
       ),
       cardTheme: CardThemeData(
         color: surfaceDark,
-        elevation: 2,
+        elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusLg),
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       ),
     );
   }

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme.dart';
+import '../../../core/error_message.dart';
+import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../models/submission_model.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
@@ -24,16 +26,6 @@ class ReviewQueueScreen extends ConsumerWidget {
             tooltip: 'Buat akun Nahkoda/Pilot',
             icon: const Icon(Icons.person_add_alt_1_outlined),
             onPressed: () => _openCreateAccount(context, ref),
-          ),
-          IconButton(
-            tooltip: 'Riwayat verifikasi',
-            icon: const Icon(Icons.history),
-            onPressed: () => context.go('/history'),
-          ),
-          IconButton(
-            tooltip: 'Keluar',
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authServiceProvider).signOut(),
           ),
         ],
       ),
@@ -69,7 +61,7 @@ class ReviewQueueScreen extends ConsumerWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: SiskaraTheme.warning.withOpacity(0.14),
+                            color: SiskaraTheme.warning.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -93,10 +85,16 @@ class ReviewQueueScreen extends ConsumerWidget {
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _QueueFailure(
-          message: 'Antrian tidak dapat dimuat: $error',
+          message: 'Antrian tidak dapat dimuat: ${ErrorMessage.from(error)}',
           onRetry: () => ref.invalidate(pendingSubmissionsProvider),
         ),
       ),
+      bottomNavigationBar: user == null
+          ? null
+          : AppBottomNav(
+              user: user,
+              location: GoRouterState.of(context).matchedLocation,
+            ),
     );
   }
 
@@ -123,161 +121,161 @@ class _CreateHeadAccountDialog extends ConsumerStatefulWidget {
 
 class _CreateHeadAccountDialogState
     extends ConsumerState<_CreateHeadAccountDialog> {
-    final _formKey = GlobalKey<FormState>();
-    final _name = TextEditingController();
-    final _email = TextEditingController();
-    final _phone = TextEditingController();
-    final _idNumber = TextEditingController();
-    final _password = TextEditingController();
-    String _role = 'kepala_kapal';
-    bool _saving = false;
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _phone = TextEditingController();
+  final _idNumber = TextEditingController();
+  final _password = TextEditingController();
+  String _role = 'kepala_kapal';
+  bool _saving = false;
 
-    @override
-    void dispose() {
-      _name.dispose();
-      _email.dispose();
-      _phone.dispose();
-      _idNumber.dispose();
-      _password.dispose();
-      super.dispose();
-    }
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _idNumber.dispose();
+    _password.dispose();
+    super.dispose();
+  }
 
-    Future<void> _save() async {
-      if (!_formKey.currentState!.validate()) return;
-      setState(() => _saving = true);
-      try {
-        await ref.read(authServiceProvider).createHeadAccount(
-              email: _email.text.trim(),
-              password: _password.text,
-              name: _name.text.trim(),
-              phone: _phone.text.trim(),
-              role: _role,
-              idNumber: _idNumber.text.trim().isEmpty
-                  ? null
-                  : _idNumber.text.trim(),
-            );
-        if (mounted) Navigator.pop(context, true);
-      } catch (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Akun tidak dapat dibuat: $error'),
-              backgroundColor: SiskaraTheme.error,
-            ),
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(authServiceProvider).createHeadAccount(
+            email: _email.text.trim(),
+            password: _password.text,
+            name: _name.text.trim(),
+            phone: _phone.text.trim(),
+            role: _role,
+            idNumber:
+                _idNumber.text.trim().isEmpty ? null : _idNumber.text.trim(),
           );
-        }
-      } finally {
-        if (mounted) setState(() => _saving = false);
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Akun tidak dapat dibuat: ${ErrorMessage.from(error)}',
+            ),
+            backgroundColor: SiskaraTheme.error,
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
+  }
 
-    @override
-    Widget build(BuildContext context) {
-      return AlertDialog(
-        title: const Text('Buat akun kepala transportasi'),
-        content: SizedBox(
-          width: 440,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: _role,
-                    decoration: const InputDecoration(labelText: 'Peran'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'kepala_kapal',
-                        child: Text('Nahkoda / Kepala kapal'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'kepala_penerbangan',
-                        child: Text('Pilot / Kepala penerbangan'),
-                      ),
-                    ],
-                    onChanged: _saving
-                        ? null
-                        : (value) {
-                            if (value != null) setState(() => _role = value);
-                          },
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _name,
-                    decoration: const InputDecoration(labelText: 'Nama lengkap'),
-                    validator: _required,
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    validator: (value) {
-                      if (value == null || !value.contains('@')) {
-                        return 'Masukkan email yang valid.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _phone,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Nomor telepon'),
-                    validator: _required,
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _idNumber,
-                    decoration: const InputDecoration(
-                      labelText: 'Nomor identitas (opsional)',
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Buat akun kepala transportasi'),
+      content: SizedBox(
+        width: 440,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: _role,
+                  decoration: const InputDecoration(labelText: 'Peran'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'kepala_kapal',
+                      child: Text('Nahkoda / Kepala kapal'),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _password,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Kata sandi sementara',
+                    DropdownMenuItem(
+                      value: 'kepala_penerbangan',
+                      child: Text('Pilot / Kepala penerbangan'),
                     ),
-                    validator: (value) => value == null || value.length < 8
-                        ? 'Minimal 8 karakter.'
-                        : null,
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (value) {
+                          if (value != null) setState(() => _role = value);
+                        },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _name,
+                  decoration: const InputDecoration(labelText: 'Nama lengkap'),
+                  validator: _required,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  validator: (value) {
+                    if (value == null || !value.contains('@')) {
+                      return 'Masukkan email yang valid.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'Nomor telepon'),
+                  validator: _required,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _idNumber,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor identitas (opsional)',
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _password,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Kata sandi sementara',
+                  ),
+                  validator: (value) => value == null || value.length < 8
+                      ? 'Minimal 8 karakter.'
+                      : null,
+                ),
+              ],
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 17,
-                    height: 17,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text('Buat akun'),
-          ),
-        ],
-      );
-    }
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context, false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 17,
+                  height: 17,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Buat akun'),
+        ),
+      ],
+    );
+  }
 
   String? _required(String? value) =>
       value == null || value.trim().isEmpty ? 'Wajib diisi.' : null;
 }
 
 class _QueueWelcome extends StatelessWidget {
-
   const _QueueWelcome({required this.name});
   final String name;
 
@@ -297,7 +295,7 @@ class _QueueWelcome extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.16),
+              color: Colors.white.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
@@ -325,7 +323,7 @@ class _QueueWelcome extends StatelessWidget {
                 Text(
                   'Tinjau deklarasi yang menunggu keputusan akhir.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.82),
+                    color: Colors.white.withValues(alpha: 0.82),
                     fontSize: 11,
                     height: 1.35,
                   ),
@@ -340,7 +338,6 @@ class _QueueWelcome extends StatelessWidget {
 }
 
 class _SubmissionCard extends StatelessWidget {
-
   const _SubmissionCard({required this.submission});
   final SubmissionModel submission;
 
@@ -370,7 +367,7 @@ class _SubmissionCard extends StatelessWidget {
                   color: (isKapal
                           ? SiskaraTheme.primaryBlue
                           : SiskaraTheme.accentTeal)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: Icon(
@@ -442,7 +439,7 @@ class _QueueEmpty extends StatelessWidget {
           width: 70,
           height: 70,
           decoration: BoxDecoration(
-            color: SiskaraTheme.success.withOpacity(0.1),
+            color: SiskaraTheme.success.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: const Icon(
@@ -496,7 +493,6 @@ class _ReadOnlyNote extends StatelessWidget {
 }
 
 class _QueueFailure extends StatelessWidget {
-
   const _QueueFailure({required this.message, required this.onRetry});
   final String message;
   final VoidCallback onRetry;
@@ -509,7 +505,8 @@ class _QueueFailure extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, size: 45, color: SiskaraTheme.error),
+            const Icon(Icons.cloud_off_outlined,
+                size: 45, color: SiskaraTheme.error),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),

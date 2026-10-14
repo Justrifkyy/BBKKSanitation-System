@@ -15,6 +15,15 @@ export interface R2ObjectMetadata {
 
 let client: S3Client | undefined;
 
+export function isR2Configured(): boolean {
+  return Boolean(
+    process.env.R2_ACCOUNT_ID &&
+      process.env.R2_BUCKET_NAME &&
+      process.env.R2_ACCESS_KEY_ID &&
+      process.env.R2_SECRET_ACCESS_KEY,
+  );
+}
+
 function getR2Config() {
   const accountId = process.env.R2_ACCOUNT_ID;
   const bucket = process.env.R2_BUCKET_NAME;
@@ -22,7 +31,9 @@ function getR2Config() {
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
 
   if (!accountId || !bucket || !accessKeyId || !secretAccessKey) {
-    throw new Error("Cloudflare R2 environment is not fully configured.");
+    throw new Error(
+      "Cloudflare R2 belum dikonfigurasi. Lengkapi variabel R2_* di apps/web/.env.",
+    );
   }
 
   return { accountId, bucket, accessKeyId, secretAccessKey };

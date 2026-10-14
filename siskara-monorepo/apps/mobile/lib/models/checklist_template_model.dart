@@ -1,3 +1,4 @@
+// ignore: dangling_library_doc_comments
 /// Checklist template and item models for dynamic form rendering.
 
 class ChecklistTemplateModel {

@@ -53,7 +53,6 @@ class AppConstants {
   static const double photoCompressionQuality = 0.7;
 
   // ─── API Base URL ──────────────────────────────────────
-  // TODO: Replace with actual deployed web app URL
   static const String apiBaseUrl = String.fromEnvironment(
     'SISKARA_API_BASE_URL',
     defaultValue: 'https://lycabyte.store/api',

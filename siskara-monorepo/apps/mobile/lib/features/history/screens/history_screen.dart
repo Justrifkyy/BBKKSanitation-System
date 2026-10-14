@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme.dart';
+import '../../../core/error_message.dart';
+import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../models/submission_model.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
@@ -22,8 +24,7 @@ class HistoryScreen extends ConsumerWidget {
         leading: IconButton(
           tooltip: 'Kembali',
           icon: const Icon(Icons.arrow_back),
-          onPressed: () =>
-              context.go(isStaff ? '/review' : '/submission'),
+          onPressed: () => context.go('/dashboard'),
         ),
       ),
       body: submissions.when(
@@ -79,7 +80,7 @@ class HistoryScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Riwayat tidak dapat dimuat: $error',
+                  'Riwayat tidak dapat dimuat: ${ErrorMessage.from(error)}',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -93,6 +94,12 @@ class HistoryScreen extends ConsumerWidget {
           ),
         ),
       ),
+      bottomNavigationBar: user == null
+          ? null
+          : AppBottomNav(
+              user: user,
+              location: GoRouterState.of(context).matchedLocation,
+            ),
     );
   }
 }
@@ -135,7 +142,7 @@ class _HistorySummary extends StatelessWidget {
                       ? 'Keputusan verifikasi yang telah Anda berikan'
                       : 'Status deklarasi sanitasi Anda',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.82),
+                    color: Colors.white.withValues(alpha: 0.82),
                     fontSize: 11,
                   ),
                 ),
@@ -172,7 +179,7 @@ class _HistoryCard extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor:
-                    SiskaraTheme.statusColor(submission.status).withOpacity(0.12),
+                    SiskaraTheme.statusColor(submission.status).withValues(alpha: 0.12),
                 child: Icon(
                   isKapal
                       ? Icons.directions_boat_outlined
@@ -211,7 +218,7 @@ class _HistoryCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: SiskaraTheme.statusColor(submission.status)
-                            .withOpacity(0.12),
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -251,7 +258,7 @@ class _HistoryEmpty extends StatelessWidget {
           Icon(
             Icons.inbox_outlined,
             size: 66,
-            color: SiskaraTheme.textSecondary.withOpacity(0.55),
+            color: SiskaraTheme.textSecondary.withValues(alpha: 0.55),
           ),
           const SizedBox(height: 15),
           Text(

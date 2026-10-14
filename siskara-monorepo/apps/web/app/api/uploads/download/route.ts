@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { adminDb } from "@/lib/firebase-admin";
 import { COLLECTIONS } from "@/lib/constants";
-import { getDownloadUrl, parseStoragePath } from "@/lib/r2";
+import { getDownloadUrl, isR2Configured, parseStoragePath } from "@/lib/r2";
 
 const KEY_PATTERN = /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_.-]+)+$/;
 
 export async function POST(request: NextRequest) {
   const authResult = await verifyAuth(request);
   if ("error" in authResult) return authResult.error;
+  if (!isR2Configured()) {
+    return NextResponse.json(
+      { error: "Penyimpanan media belum dikonfigurasi di server." },
+      { status: 503 },
+    );
+  }
 
   const body = (await request.json()) as { storage_path?: unknown };
   if (typeof body.storage_path !== "string") {

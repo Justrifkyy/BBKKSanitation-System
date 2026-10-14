@@ -94,12 +94,18 @@ login is used separately to deploy rules and indexes. Never commit service
 account keys.
 
 Private signatures, evidence photos/videos, and future generated documents use
-a private Cloudflare R2 bucket, not Firebase Storage. Configure the R2
+a private Cloudflare R2 bucket, not Firestore or Firebase Storage. Firestore
+stores only protected object paths and media metadata. Configure the R2
 account ID, bucket name, and a bucket-scoped access key in local `.env` and
 the web deployment secrets. Mobile uploads use short-lived, authenticated
 presigned URLs; API routes verify upload ownership and provide short-lived
 download URLs only to the submitter and authorized BBKK staff/admin. Do not
 enable public bucket access.
+
+Cloudflare R2 currently includes monthly free-tier quotas for Standard storage
+(10 GB-month), Class A operations (1 million), Class B operations (10 million),
+and free egress. Usage beyond included quotas can incur charges. See
+[Cloudflare R2 pricing](https://developers.cloudflare.com/r2/pricing/).
 
 ```bash
 # Dry-run (does not connect to or write to Firebase)

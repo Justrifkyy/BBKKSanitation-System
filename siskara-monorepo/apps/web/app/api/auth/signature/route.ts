@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   deleteObject,
   headObject,
+  isR2Configured,
   parseStoragePath,
   promoteObject,
   readObjectBytes,
@@ -38,6 +39,12 @@ export async function POST(request: NextRequest) {
     "staf_bbkk",
   ]);
   if ("error" in authResult) return authResult.error;
+  if (!isR2Configured()) {
+    return NextResponse.json(
+      { error: "Penyimpanan tanda tangan belum dikonfigurasi di server." },
+      { status: 503 },
+    );
+  }
 
   const body = (await request.json()) as { signature_url?: unknown };
   if (typeof body.signature_url !== "string") {
@@ -58,22 +65,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const uploadedObject = await headObject(filePath);
   const extension = uploadMatch[3].toLowerCase();
   const expectedContentType =
     extension === "png" ? "image/png" : "image/svg+xml";
-  if (
-    !uploadedObject ||
-    uploadedObject.ContentType !== expectedContentType ||
-    (uploadedObject.ContentLength ?? 0) <= 0 ||
-    (uploadedObject.ContentLength ?? Infinity) > 512 * 1024
-  ) {
-    return NextResponse.json(
-      { error: "Berkas tanda tangan belum diunggah atau tidak valid." },
-      { status: 404 },
-    );
-  }
-  const uploadedBytes = await readObjectBytes(filePath);
+  const [uploadedObject, uploadedBytes] = await Promise.all([
+    headObject(filePath),
+    readObjectBytes(filePath),
+  ]);
   const hasValidContent =
     extension === "png"
       ? uploadedBytes != null &&
@@ -82,9 +80,15 @@ export async function POST(request: NextRequest) {
           Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
         )
       : uploadedBytes != null && isValidSignatureSvg(uploadedBytes);
-  if (!hasValidContent) {
+  if (
+    !uploadedObject ||
+    uploadedObject.ContentType !== expectedContentType ||
+    (uploadedObject.ContentLength ?? 0) <= 0 ||
+    (uploadedObject.ContentLength ?? Infinity) > 512 * 1024 ||
+    !hasValidContent
+  ) {
     return NextResponse.json(
-      { error: "Isi file tanda tangan tidak sesuai format PNG atau SVG." },
+      { error: "Berkas tanda tangan belum diunggah atau tidak valid." },
       { status: 400 },
     );
   }

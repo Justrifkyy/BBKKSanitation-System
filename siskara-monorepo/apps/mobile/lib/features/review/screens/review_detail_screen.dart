@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme.dart';
+import '../../../core/error_message.dart';
+import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
 import '../../../services/firestore_service.dart';
@@ -63,7 +65,9 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Keputusan tidak dapat disimpan: $error'),
+            content: Text(
+              'Keputusan tidak dapat disimpan: ${ErrorMessage.from(error)}',
+            ),
             backgroundColor: SiskaraTheme.error,
           ),
         );
@@ -75,6 +79,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authStateProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(title: const Text('Detail pemeriksaan')),
       body: FutureBuilder<_ReviewData?>(
@@ -85,7 +90,9 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
           }
           if (snapshot.hasError) {
             return _ReviewError(
-              message: 'Detail pengajuan tidak dapat dimuat: ${snapshot.error}',
+              message:
+                  'Detail pengajuan tidak dapat dimuat: '
+                  '${ErrorMessage.from(snapshot.error!)}',
               onRetry: () => setState(() {
                 _reviewFuture = ref
                     .read(firestoreServiceProvider)
@@ -165,63 +172,77 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
           );
         },
       ),
-      bottomNavigationBar: FutureBuilder<_ReviewData?>(
-        future: _reviewFuture,
-        builder: (context, snapshot) {
-          if (snapshot.data?.submission.status != 'menunggu_verifikasi_staf') {
-            return const SizedBox.shrink();
-          }
-          return SafeArea(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: const Border(
-                  top: BorderSide(color: SiskaraTheme.divider),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FutureBuilder<_ReviewData?>(
+            future: _reviewFuture,
+            builder: (context, snapshot) {
+              if (snapshot.data?.submission.status !=
+                  'menunggu_verifikasi_staf') {
+                return const SizedBox.shrink();
+              }
+              return SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    border: const Border(
+                      top: BorderSide(color: SiskaraTheme.divider),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isSavingDecision
+                              ? null
+                              : () => _decide('reject'),
+                          icon: const Icon(Icons.close, size: 18),
+                          label: const Text('Tolak / revisi'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: SiskaraTheme.error,
+                            side: const BorderSide(color: SiskaraTheme.error),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _isSavingDecision
+                              ? null
+                              : () => _decide('approve'),
+                          icon: _isSavingDecision
+                              ? const SizedBox(
+                                  width: 17,
+                                  height: 17,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.check, size: 18),
+                          label: const Text('Setujui'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: SiskaraTheme.success,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed:
-                          _isSavingDecision ? null : () => _decide('reject'),
-                      icon: const Icon(Icons.close, size: 18),
-                      label: const Text('Tolak / revisi'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: SiskaraTheme.error,
-                        side: const BorderSide(color: SiskaraTheme.error),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed:
-                          _isSavingDecision ? null : () => _decide('approve'),
-                      icon: _isSavingDecision
-                          ? const SizedBox(
-                              width: 17,
-                              height: 17,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.check, size: 18),
-                      label: const Text('Setujui'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: SiskaraTheme.success,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              );
+            },
+          ),
+          if (user != null)
+            AppBottomNav(
+              user: user,
+              location: GoRouterState.of(context).matchedLocation,
             ),
-          );
-        },
+        ],
       ),
     );
   }
@@ -420,7 +441,7 @@ class _SubmissionHeader extends StatelessWidget {
           Text(
             '${submission.isKapal ? 'Kapal' : 'Pesawat'} • ${submission.createdAt.toLocal()}',
             style:
-                TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11),
+                TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
           ),
           const SizedBox(height: 10),
           _StatusChip(status: submission.status),
@@ -598,7 +619,10 @@ class _AnswerDetail extends StatelessWidget {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Bukti tidak dapat dibuka: $error'),
+                            content: Text(
+                              'Bukti tidak dapat dibuka: '
+                              '${ErrorMessage.from(error)}',
+                            ),
                             backgroundColor: SiskaraTheme.error,
                           ),
                         );
@@ -660,7 +684,17 @@ class _EvidenceImageState extends State<_EvidenceImage> {
     return FutureBuilder<String>(
       future: _imageUrl,
       builder: (context, snapshot) {
-        if (snapshot.hasError) return const _MediaError();
+        if (snapshot.hasError) {
+          return _MediaError(
+            message: ErrorMessage.from(
+              snapshot.error!,
+              fallback: 'Bukti foto tidak dapat dimuat.',
+            ),
+            onRetry: () => setState(() {
+              _imageUrl = _resolveUrl(widget.storagePath);
+            }),
+          );
+        }
         if (!snapshot.hasData) {
           return const SizedBox(
             height: 180,
@@ -674,7 +708,15 @@ class _EvidenceImageState extends State<_EvidenceImage> {
             height: 180,
             width: double.infinity,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => const _MediaError(),
+            errorBuilder: (context, error, stackTrace) => _MediaError(
+              message: ErrorMessage.from(
+                error,
+                fallback: 'Bukti foto tidak dapat dimuat. Periksa koneksi.',
+              ),
+              onRetry: () => setState(() {
+                _imageUrl = _resolveUrl(widget.storagePath);
+              }),
+            ),
           ),
         );
       },
@@ -692,10 +734,10 @@ class _StatusChip extends StatelessWidget {
     final isPending = status == 'menunggu_verifikasi_staf';
     final isRejected = status == 'ditolak_otomatis' || status == 'ditolak_staf';
     final background = isRejected
-        ? SiskaraTheme.error.withOpacity(0.12)
+        ? SiskaraTheme.error.withValues(alpha: 0.12)
         : isPending
-            ? SiskaraTheme.warning.withOpacity(0.15)
-            : SiskaraTheme.success.withOpacity(0.12);
+            ? SiskaraTheme.warning.withValues(alpha: 0.15)
+            : SiskaraTheme.success.withValues(alpha: 0.12);
     final foreground = isRejected
         ? SiskaraTheme.error
         : isPending
@@ -736,7 +778,7 @@ class _NoticeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -796,7 +838,10 @@ class _ReviewError extends StatelessWidget {
 }
 
 class _MediaError extends StatelessWidget {
-  const _MediaError();
+  const _MediaError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -804,7 +849,21 @@ class _MediaError extends StatelessWidget {
       height: 120,
       alignment: Alignment.center,
       color: SiskaraTheme.backgroundLight,
-      child: const Text('Bukti media tidak dapat dimuat.'),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11),
+          ),
+          TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 15),
+            label: const Text('Coba lagi'),
+          ),
+        ],
+      ),
     );
   }
 }

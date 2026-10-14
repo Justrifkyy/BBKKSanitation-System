@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/error_message.dart';
 import '../../../core/theme.dart';
 import '../../../state/auth_state.dart';
-import '../../../services/api_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -41,19 +40,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Router will auto-redirect based on role
     } catch (e) {
       if (mounted) {
-        final message = e is ApiException
-            ? e.message
-            : e is FirebaseAuthException
-                ? switch (e.code) {
-                    'invalid-credential' || 'wrong-password' || 'user-not-found' =>
-                      'Email atau kata sandi tidak sesuai.',
-                    'network-request-failed' =>
-                      'Tidak dapat terhubung. Periksa koneksi internet.',
-                    'too-many-requests' =>
-                      'Terlalu banyak percobaan. Coba kembali beberapa saat lagi.',
-                    _ => 'Login gagal. Periksa kembali data akun Anda.',
-                  }
-                : 'Login gagal. Silakan coba lagi.';
+        final message = ErrorMessage.from(
+          e,
+          fallback: 'Login gagal. Periksa data akun lalu coba kembali.',
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
@@ -80,7 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Logo & Title
-                  Icon(
+                  const Icon(
                     Icons.health_and_safety,
                     size: 80,
                     color: SiskaraTheme.primaryBlue,

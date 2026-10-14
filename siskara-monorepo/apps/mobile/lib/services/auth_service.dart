@@ -56,19 +56,20 @@ class AuthService {
 
   /// Fetch user profile from Firestore.
   Future<UserModel?> getUserProfile(String uid) async {
-    final doc = await _firestore.collection(AppConstants.colUsers).doc(uid).get();
+    final doc =
+        await _firestore.collection(AppConstants.colUsers).doc(uid).get();
     if (!doc.exists) return null;
     return UserModel.fromMap(doc.data()!, doc.id);
   }
 
-  Future<void> updateSignature(String uid, String signatureUrl) async {
+  Future<void> updateSignature(String uid, String storagePath) async {
     final user = _auth.currentUser;
     if (user == null || user.uid != uid) {
       throw StateError('Pengguna tidak dapat mengubah tanda tangan akun lain.');
     }
     await ApiService().post(
       '/auth/signature',
-      body: {'signature_url': signatureUrl},
+      body: {'signature_url': storagePath},
       idToken: await user.getIdToken(),
     );
   }

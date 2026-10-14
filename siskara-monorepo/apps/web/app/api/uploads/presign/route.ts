@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { adminDb } from "@/lib/firebase-admin";
 import { COLLECTIONS } from "@/lib/constants";
-import { createUploadUrl, storagePath } from "@/lib/r2";
+import { createUploadUrl, isR2Configured, storagePath } from "@/lib/r2";
 
 const MAX_SIGNATURE_BYTES = 512 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
@@ -29,6 +29,12 @@ export async function POST(request: NextRequest) {
     "staf_bbkk",
   ]);
   if ("error" in authResult) return authResult.error;
+  if (!isR2Configured()) {
+    return NextResponse.json(
+      { error: "Penyimpanan media belum dikonfigurasi di server." },
+      { status: 503 },
+    );
+  }
 
   const body = (await request.json()) as Record<string, unknown>;
   const purpose = body.purpose;

@@ -3,7 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { adminDb } from "@/lib/firebase-admin";
 import { COLLECTIONS } from "@/lib/constants";
-import { headObject, parseStoragePath, promoteObject, storagePath } from "@/lib/r2";
+import {
+  headObject,
+  isR2Configured,
+  parseStoragePath,
+  promoteObject,
+  storagePath,
+} from "@/lib/r2";
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
@@ -23,6 +29,12 @@ export async function POST(request: NextRequest) {
     "kepala_penerbangan",
   ]);
   if ("error" in authResult) return authResult.error;
+  if (!isR2Configured()) {
+    return NextResponse.json(
+      { error: "Penyimpanan bukti media belum dikonfigurasi di server." },
+      { status: 503 },
+    );
+  }
 
   const body = (await request.json()) as Record<string, unknown>;
   if (

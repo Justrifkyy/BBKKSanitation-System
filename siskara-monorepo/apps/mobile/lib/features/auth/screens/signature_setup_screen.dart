@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:signature/signature.dart';
 
 import '../../../core/theme.dart';
+import '../../../core/error_message.dart';
 import '../../../services/storage_service.dart';
 import '../../../state/auth_state.dart';
 
@@ -45,7 +46,9 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
       return;
     }
 
-    final needsSignature = !user.hasSignature;
+    final isSignatureUpdate =
+        GoRouterState.of(context).uri.queryParameters['update'] == 'true';
+    final needsSignature = !user.hasSignature || isSignatureUpdate;
     final needsPin = !user.hasPin;
     if (needsSignature &&
         _uploadedSignature == null &&
@@ -66,8 +69,8 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
 
     setState(() => _isSaving = true);
     try {
-      final storageService = StorageService();
       final authService = ref.read(authServiceProvider);
+      final storageService = StorageService();
 
       if (needsSignature) {
         final bytes =
@@ -76,12 +79,12 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
           throw StateError(
               'Tanda tangan tidak dapat diproses. Coba gambar ulang.');
         }
-        final signatureUrl = await storageService.uploadSignatureBytes(
+        final signaturePath = await storageService.uploadSignatureBytes(
           user.id,
           bytes,
           contentType: _uploadedSignatureContentType ?? 'image/png',
         );
-        await authService.updateSignature(user.id, signatureUrl);
+        await authService.updateSignature(user.id, signaturePath);
       }
 
       if (needsPin) await authService.setPin(_pinController.text);
@@ -90,9 +93,13 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profil keamanan berhasil disimpan.')),
       );
-      context.go(user.isStaf ? '/review' : '/submission');
+      context.go('/dashboard');
     } catch (error) {
-      if (mounted) _showMessage('Tidak dapat menyimpan pengaturan: $error');
+      if (mounted) {
+        _showMessage(
+          'Tidak dapat menyimpan pengaturan: ${ErrorMessage.from(error)}',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -100,7 +107,7 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
 
   Future<void> _pickSignature() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['png', 'svg'],
         allowMultiple: false,
@@ -138,7 +145,9 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
     } on PlatformException catch (error) {
       _showMessage('Tidak dapat membuka pemilih file: ${error.message}');
     } catch (error) {
-      _showMessage('Tidak dapat memilih tanda tangan: $error');
+      _showMessage(
+        'Tidak dapat memilih tanda tangan: ${ErrorMessage.from(error)}',
+      );
     }
   }
 
@@ -183,12 +192,16 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).valueOrNull;
-    final needsSignature = user?.hasSignature != true;
+    final isSignatureUpdate =
+        GoRouterState.of(context).uri.queryParameters['update'] == 'true';
+    final needsSignature = user?.hasSignature != true || isSignatureUpdate;
     final needsPin = user?.hasPin != true;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Keamanan akun'),
+        title: Text(
+          isSignatureUpdate ? 'Tanda tangan digital' : 'Keamanan akun',
+        ),
         automaticallyImplyLeading: false,
         actions: [
           TextButton.icon(
@@ -208,7 +221,9 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
                   const _SetupProgress(),
                   const SizedBox(height: 22),
                   Text(
-                    'Siapkan tanda tangan digital',
+                    isSignatureUpdate
+                        ? 'Perbarui tanda tangan digital'
+                        : 'Siapkan tanda tangan digital',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -348,8 +363,11 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
                               ),
                             )
                           : const Icon(Icons.arrow_forward),
-                      label: Text(
-                          _isSaving ? 'Menyimpan...' : 'Simpan dan lanjutkan'),
+                      label: Text(_isSaving
+                          ? 'Menyimpan...'
+                          : isSignatureUpdate
+                              ? 'Simpan tanda tangan'
+                              : 'Simpan dan lanjutkan'),
                     ),
                   ),
                 ],
@@ -387,7 +405,7 @@ class _SectionHeading extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 14,
-          backgroundColor: SiskaraTheme.accentTeal.withOpacity(0.12),
+          backgroundColor: SiskaraTheme.accentTeal.withValues(alpha: 0.12),
           child: Text(
             number,
             style: const TextStyle(
@@ -414,7 +432,7 @@ class _InfoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: SiskaraTheme.success.withOpacity(0.07),
+        color: SiskaraTheme.success.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
