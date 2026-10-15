@@ -22,6 +22,7 @@ final authStateProvider = StreamProvider<UserModel?>((ref) {
         .doc(fbUser.uid)
         .snapshots()
         .asyncMap((snapshot) async {
+      if (authService.currentUser == null) return null;
       if (!snapshot.exists) {
         throw StateError('Profil pengguna tidak ditemukan.');
       }
@@ -30,6 +31,9 @@ final authStateProvider = StreamProvider<UserModel?>((ref) {
         throw StateError('Role akun tidak valid. Hubungi administrator.');
       }
       return UserModel.fromMap(snapshot.data()!, snapshot.id);
+    }).handleError((error) {
+      if (authService.currentUser == null) return null;
+      throw error;
     });
   });
 });

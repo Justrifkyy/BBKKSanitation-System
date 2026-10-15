@@ -17,7 +17,6 @@ import '../../../core/widgets/interactive_photo_viewer.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
 import '../../../models/user_model.dart';
-import '../../../services/firestore_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
@@ -473,7 +472,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 const Text(
                   'Melanjutkan Draf Pengisian',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF0F3D39),
                   ),
@@ -483,7 +482,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                       ? 'Tersimpan otomatis • $_restoredDraftTime'
                       : 'Data yang Anda isi sebelumnya telah dipulihkan.',
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     color: SiskaraTheme.textSecondary,
                   ),
                 ),
@@ -500,7 +499,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
             child: const Text(
               'Mulai Baru',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFFB93838),
               ),
@@ -1147,29 +1146,29 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                           _scheduleAutoSave();
                         },
                   controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  contentPadding: EdgeInsets.zero,
                   dense: true,
                   title: const Text(
                     'Saya menyatakan seluruh data sesuai kondisi sebenarnya di lokasi pemeriksaan dan foto bukti diambil pada bagian yang diperiksa.',
-                    style: TextStyle(fontSize: 11, height: 1.35),
+                    style: TextStyle(fontSize: 12.5, height: 1.4),
                   ),
                 ),
                 const _DeclarationNotice(),
-                const SizedBox(height: 17),
+                const SizedBox(height: 18),
                 SizedBox(
-                  height: 44,
+                  height: 46,
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _isSubmitting
                         ? null
                         : () => _saveDraft(template: template, items: items),
                     icon: const Icon(Icons.save_outlined, size: 18),
-                    label: const Text('Simpan draft'),
+                    label: const Text('Simpan draft', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
                 ),
-                const SizedBox(height: 9),
+                const SizedBox(height: 10),
                 SizedBox(
-                  height: 46,
+                  height: 48,
                   child: FilledButton(
                     onPressed: _isSubmitting
                         ? null
@@ -1194,12 +1193,12 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                                       ? _submittingStatus
                                       : 'Memproses...',
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12),
+                                  style: const TextStyle(fontSize: 13),
                                 ),
                               ),
                             ],
                           )
-                        : const Text('Tanda tangani & kirim'),
+                        : const Text('Tanda tangani & kirim', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1208,7 +1207,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: SiskaraTheme.textSecondary,
-                    fontSize: 11,
+                    fontSize: 12,
                   ),
                 ),
               ]),
@@ -1229,7 +1228,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               signed: false,
             )
           : TextInputType.text,
-      style: const TextStyle(fontSize: 12),
+      style: const TextStyle(fontSize: 14),
       textCapitalization: TextCapitalization.sentences,
       readOnly: field.dateTime,
       inputFormatters: field.numeric
@@ -1243,15 +1242,15 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       decoration: InputDecoration(
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 8,
+          horizontal: 14,
+          vertical: 12,
         ),
         labelText: '${field.label}${field.required ? ' *' : ''}',
         hintText: field.hint,
-        labelStyle: const TextStyle(fontSize: 10),
-        hintStyle: const TextStyle(fontSize: 9),
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        hintStyle: const TextStyle(fontSize: 13, color: SiskaraTheme.textSecondary),
         suffixIcon: field.dateTime
-            ? const Icon(Icons.calendar_month_outlined, size: 15)
+            ? const Icon(Icons.calendar_month_outlined, size: 18)
             : null,
       ),
       validator: (value) {
@@ -1405,15 +1404,16 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                     Text(
                       item.label,
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       item.kategori,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12.5,
                         color: SiskaraTheme.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1422,7 +1422,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
                 decoration: BoxDecoration(
                   color: hasEvidence
                       ? SiskaraTheme.success.withValues(alpha: 0.12)
@@ -1432,7 +1432,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 child: Text(
                   hasEvidence ? 'Foto Siap' : 'Wajib Foto',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color:
                         hasEvidence ? SiskaraTheme.success : SiskaraTheme.warning,
@@ -1441,34 +1441,38 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 9),
           const Text(
             'Ambil foto kondisi sanitasi area ini. Penilaian kelayakan akan diisi oleh Petugas BBKK.',
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 13,
               color: SiskaraTheme.textSecondary,
-              height: 1.3,
+              height: 1.35,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 11),
           TextFormField(
             controller: _controller('reason_${item.id}'),
             onChanged: (_) => _scheduleAutoSave(),
             minLines: 1,
             maxLines: 2,
+            style: const TextStyle(fontSize: 14),
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
               isDense: true,
               labelText: 'Catatan kondisi pengisi (opsional)',
               hintText: 'Keterangan tambahan jika diperlukan',
+              labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              hintStyle: TextStyle(fontSize: 13, color: SiskaraTheme.textSecondary),
+              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
           ),
-          const SizedBox(height: 11),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: SiskaraTheme.primaryBlue.withValues(alpha: 0.045),
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: SiskaraTheme.primaryBlue.withValues(alpha: 0.12),
               ),
@@ -1478,28 +1482,28 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               children: [
                 Row(
                   children: [
-                    Expanded(
+                    const Expanded(
                       child: Text(
-                        'Wajib mengambil foto bukti',
-                        style:
-                            Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: SiskaraTheme.primaryDark,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                        'Foto bukti kondisi',
+                        style: TextStyle(
+                          color: SiskaraTheme.primaryDark,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                     if (hasEvidence)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 4),
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: SiskaraTheme.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
+                          color: SiskaraTheme.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Text(
-                          'Siap',
+                          'Tersimpan',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             color: SiskaraTheme.success,
                             fontWeight: FontWeight.w700,
                           ),
@@ -1509,28 +1513,28 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 ),
                 const SizedBox(height: 3),
                 const Text(
-                  'Lokasi dan waktu foto tercatat.',
+                  'Lokasi GPS dan waktu foto otomatis tercatat.',
                   style: TextStyle(
                     color: SiskaraTheme.textSecondary,
-                    fontSize: 10,
+                    fontSize: 12,
                   ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 9),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed:
                         _isSubmitting ? null : () => _captureEvidence(item),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 9),
-                      minimumSize: const Size(0, 38),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      minimumSize: const Size(0, 40),
                       textStyle: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     child: Text(
-                      hasEvidence ? 'Ulangi foto' : 'Ambil foto',
+                      hasEvidence ? 'Ulangi pengambilan foto' : 'Ambil foto bukti',
                     ),
                   ),
                 ),
@@ -1540,11 +1544,11 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
           if (hasEvidence) ...[
             const SizedBox(height: 8),
             ClipRRect(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(10),
               child: evidence != null
                   ? Image.file(
                       File(evidence.path),
-                      height: 126,
+                      height: 132,
                       width: double.infinity,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
@@ -1554,7 +1558,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                       storagePath: savedEvidence!.fileUrl,
                     ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             Row(
               children: [
                 Expanded(
@@ -1569,7 +1573,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: SiskaraTheme.textSecondary,
-                      fontSize: 9,
+                      fontSize: 11.5,
                     ),
                   ),
                 ),
@@ -1585,7 +1589,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                             });
                             _scheduleAutoSave();
                           },
-                    child: const Text('Hapus foto baru'),
+                    child: const Text('Hapus foto baru', style: TextStyle(fontSize: 12)),
                   ),
               ],
             ),
@@ -1764,35 +1768,44 @@ class _GeneralFieldGroupCard extends StatelessWidget {
                 child: Text(
                   group.title,
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ),
-              Text(
-                '${fields.length} kolom',
-                style: const TextStyle(
-                  fontSize: 9,
-                  color: SiskaraTheme.textSecondary,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: SiskaraTheme.primaryBlue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${fields.length} kolom',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: SiskaraTheme.primaryBlue,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) {
-              const gap = 8.0;
+              const gap = 12.0;
               final compactWidth = (constraints.maxWidth - gap) / 2;
+              final isWide = constraints.maxWidth > 580;
               return Wrap(
                 spacing: gap,
-                runSpacing: 6,
+                runSpacing: 10,
                 children: [
                   for (final field in fields)
                     SizedBox(
-                      width: (field.fullWidth ??
-                              (field.dateTime || field.label.length > 18))
-                          ? constraints.maxWidth
-                          : compactWidth,
+                      width: isWide && !(field.fullWidth ?? false)
+                          ? compactWidth
+                          : constraints.maxWidth,
                       child: buildField(field),
                     ),
                 ],
@@ -1856,19 +1869,18 @@ class _WelcomeCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   '$templateName • v$version',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    // ignore: deprecated_member_use
-                    color: Colors.white.withOpacity(0.83),
-                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.88),
+                    fontSize: 13,
                     height: 1.35,
                   ),
                 ),
@@ -1899,39 +1911,44 @@ class _FormSectionTitle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 26,
-          height: 26,
+          width: 28,
+          height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: SiskaraTheme.primaryBlue.withValues(alpha: 0.09),
+            color: SiskaraTheme.primaryBlue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(9),
           ),
           child: Text(
             number,
             style: const TextStyle(
               color: SiskaraTheme.primaryBlue,
-              fontSize: 11,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 9),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: SiskaraTheme.textPrimary,
+                  letterSpacing: -0.2,
+                ),
               ),
               const SizedBox(height: 3),
               Text(
                 subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SiskaraTheme.textSecondary,
-                    ),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: SiskaraTheme.textSecondary,
+                  height: 1.35,
+                ),
               ),
             ],
           ),
@@ -1941,7 +1958,7 @@ class _FormSectionTitle extends StatelessWidget {
           Text(
             trailing!,
             style: const TextStyle(
-              fontSize: 9,
+              fontSize: 12,
               color: SiskaraTheme.textSecondary,
             ),
           ),
@@ -1959,11 +1976,11 @@ class _SurfaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: Border.all(color: SiskaraTheme.divider.withValues(alpha: 0.65)),
-        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SiskaraTheme.divider.withValues(alpha: 0.75)),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: child,
     );
@@ -1977,13 +1994,15 @@ class _CategoryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 1),
+      padding: const EdgeInsets.only(top: 6, bottom: 2),
       child: Text(
         title.isEmpty ? 'Pemeriksaan' : title,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: SiskaraTheme.primaryDark,
-              fontWeight: FontWeight.w700,
-            ),
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: SiskaraTheme.primaryDark,
+          letterSpacing: -0.2,
+        ),
       ),
     );
   }
@@ -1998,13 +2017,13 @@ class _DeclarationNotice extends StatelessWidget {
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF7E8),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: const Text(
-        'Deklarasi ditandatangani oleh pemilik akun dan menjadi bagian dari catatan pemeriksaan.',
+        'Deklarasi ditandatangani oleh pemilik akun dan menjadi bagian dari catatan pemeriksaan resmi.',
         style: TextStyle(
           color: Color(0xFF71582E),
-          fontSize: 11,
+          fontSize: 13,
           height: 1.45,
         ),
       ),

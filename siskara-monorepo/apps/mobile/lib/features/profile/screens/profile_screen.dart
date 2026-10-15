@@ -6,6 +6,7 @@ import '../../../core/theme.dart';
 import '../../../core/error_message.dart';
 import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../state/auth_state.dart';
+import '../../../state/submission_state.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -138,25 +139,26 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => context.go('/signature-setup?update=true'),
-                icon: const Icon(Icons.draw_outlined, size: 17),
-                label: const Text('Perbarui tanda tangan'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  minimumSize: const Size(0, 40),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.go('/signature-setup?update=true'),
+                  icon: const Icon(Icons.draw_outlined, size: 18),
+                  label: const Text('Perbarui tanda tangan', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
               ),
-              const SizedBox(height: 9),
-              OutlinedButton.icon(
-                onPressed: () => _signOut(context, ref),
-                icon: const Icon(Icons.logout),
-                label: const Text('Keluar dari akun'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: SiskaraTheme.error,
-                  side: const BorderSide(color: SiskaraTheme.error),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () => _signOut(context, ref),
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('Keluar dari akun', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: SiskaraTheme.error,
+                    side: const BorderSide(color: SiskaraTheme.error),
+                  ),
                 ),
               ),
             ],
@@ -178,19 +180,12 @@ class ProfileScreen extends ConsumerWidget {
 
   static Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     try {
-      await ref.read(authServiceProvider).signOut();
       if (context.mounted) context.go('/login');
-    } catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Tidak dapat keluar dari akun: ${ErrorMessage.from(error)}',
-            ),
-            backgroundColor: SiskaraTheme.error,
-          ),
-        );
-      }
+      await ref.read(authServiceProvider).signOut();
+      ref.invalidate(authStateProvider);
+      ref.invalidate(userSubmissionsProvider);
+    } catch (_) {
+      if (context.mounted) context.go('/login');
     }
   }
 }
@@ -203,11 +198,11 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: SiskaraTheme.divider.withValues(alpha: 0.7)),
+        border: Border.all(color: SiskaraTheme.divider.withValues(alpha: 0.75)),
       ),
       child: Column(children: children),
     );
@@ -229,19 +224,27 @@ class _ProfileRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: SiskaraTheme.primaryBlue, size: 21),
+        Icon(icon, color: SiskaraTheme.primaryBlue, size: 22),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: SiskaraTheme.textSecondary,
+                ),
+              ),
               const SizedBox(height: 3),
               Text(
                 value,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: SiskaraTheme.textPrimary,
+                ),
               ),
             ],
           ),
@@ -265,21 +268,31 @@ class _SecurityRow extends StatelessWidget {
         Icon(
           isComplete ? Icons.verified_outlined : Icons.pending_outlined,
           color: color,
-          size: 21,
+          size: 22,
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
-        Text(
-          isComplete ? 'Aktif' : 'Belum diatur',
-          style: TextStyle(
-            color: color,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            isComplete ? 'Aktif' : 'Belum diatur',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],

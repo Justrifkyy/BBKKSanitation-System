@@ -140,7 +140,7 @@ class _HistorySummary extends StatelessWidget {
                   '$total catatan',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 17,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -150,8 +150,8 @@ class _HistorySummary extends StatelessWidget {
                       ? 'Keputusan verifikasi yang telah Anda berikan'
                       : 'Status deklarasi sanitasi Anda',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.82),
-                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.88),
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -176,12 +176,12 @@ class _HistoryCard extends StatelessWidget {
         submission.dataUmum['nomor_penerbangan'] ??
         (isKapal ? 'Pengajuan kapal' : 'Pengajuan pesawat');
     return Card(
-      margin: const EdgeInsets.only(bottom: 9),
+      margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(13),
+          padding: const EdgeInsets.all(14),
           child: Row(
             children: [
               CircleAvatar(
@@ -192,11 +192,11 @@ class _HistoryCard extends StatelessWidget {
                   isKapal
                       ? Icons.directions_boat_outlined
                       : Icons.flight_outlined,
-                  size: 20,
+                  size: 21,
                   color: SiskaraTheme.statusColor(submission.status),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,23 +206,24 @@ class _HistoryCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.1,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Text(
                       '${isKapal ? 'Kapal' : 'Pesawat'} • ${_formatDate(submission.createdAt)}',
                       style: const TextStyle(
                         color: SiskaraTheme.textSecondary,
-                        fontSize: 10,
+                        fontSize: 12.5,
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 8),
                     if (submission.isDraft)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 9,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
@@ -238,7 +239,7 @@ class _HistoryCard extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.edit_note_rounded,
-                              size: 14,
+                              size: 15,
                               color: Color(0xFF0D9488),
                             ),
                             SizedBox(width: 4),
@@ -246,7 +247,7 @@ class _HistoryCard extends StatelessWidget {
                               'Draf • Ketuk untuk lanjutkan',
                               style: TextStyle(
                                 color: Color(0xFF0D9488),
-                                fontSize: 9.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -254,12 +255,13 @@ class _HistoryCard extends StatelessWidget {
                         ),
                       )
                     else if (submission.status == 'final')
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
+                              horizontal: 9,
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
@@ -270,16 +272,15 @@ class _HistoryCard extends StatelessWidget {
                               'Disetujui (ACC)',
                               style: TextStyle(
                                 color: Color(0xFF16A34A),
-                                fontSize: 9,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 3.5,
+                              horizontal: 8,
+                              vertical: 4,
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF0F766E).withValues(alpha: 0.1),
@@ -294,14 +295,14 @@ class _HistoryCard extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.picture_as_pdf_outlined,
-                                  size: 11,
+                                  size: 13,
                                   color: Color(0xFF0F766E),
                                 ),
-                                SizedBox(width: 3),
+                                SizedBox(width: 4),
                                 Text(
                                   'Surat A4 Terbit',
                                   style: TextStyle(
-                                    fontSize: 8.5,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF0F766E),
                                   ),
@@ -314,7 +315,7 @@ class _HistoryCard extends StatelessWidget {
                     else
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 9,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
@@ -326,7 +327,7 @@ class _HistoryCard extends StatelessWidget {
                           SiskaraTheme.statusLabel(submission.status),
                           style: TextStyle(
                             color: SiskaraTheme.statusColor(submission.status),
-                            fontSize: 9,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

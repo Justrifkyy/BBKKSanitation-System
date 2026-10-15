@@ -212,7 +212,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   'KEMENTERIAN KESEHATAN RI',
                                   style: TextStyle(
                                     color: Color(0xFF7EE7D7),
-                                    fontSize: 9,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 0.8,
                                   ),
@@ -276,7 +276,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             'ARJUNA',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 25,
+                              fontSize: 26,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.8,
                               color: Colors.white,
@@ -288,10 +288,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           'Balai Besar Kekarantinaan Kesehatan Makassar',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFFD4EFEB)
-                                .withValues(alpha: 0.85),
+                                .withValues(alpha: 0.88),
                             letterSpacing: 0.2,
                           ),
                         ),
@@ -512,8 +512,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   'Sistem Operasional · BBKK Makassar',
                                   style: TextStyle(
                                     color: const Color(0xFFD4EFEB)
-                                        .withValues(alpha: 0.65),
-                                    fontSize: 8.5,
+                                        .withValues(alpha: 0.75),
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -550,62 +550,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           label,
           style: const TextStyle(
             color: Color(0xFFC9EDE7),
-            fontSize: 10.5,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.1,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
           ),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: const Color(0xFF06191F).withValues(alpha: 0.82),
+            fillColor: const Color(0xFF06191F).withValues(alpha: 0.85),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 11,
-              vertical: 10,
+              horizontal: 14,
+              vertical: 13,
             ),
             hintText: hintText,
             hintStyle: TextStyle(
-              color: const Color(0xFFD4EFEB).withValues(alpha: 0.32),
-              fontSize: 11.5,
+              color: const Color(0xFFD4EFEB).withValues(alpha: 0.38),
+              fontSize: 13,
             ),
             prefixIcon: Icon(
               prefixIcon,
               color: const Color(0xFF56B3A7),
-              size: 17,
+              size: 19,
             ),
             suffixIcon: suffixWidget,
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(
-                color: const Color(0xFF2DD4BF).withValues(alpha: 0.20),
+                color: const Color(0xFF2DD4BF).withValues(alpha: 0.22),
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(
                 color: Color(0xFF2DD4BF),
                 width: 1.5,
               ),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(
                 color: Color(0xFFEF4444),
                 width: 1.0,
               ),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(
                 color: Color(0xFFEF4444),
                 width: 1.5,
@@ -613,7 +613,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             errorStyle: const TextStyle(
               color: Color(0xFFFCA5A5),
-              fontSize: 10,
+              fontSize: 11.5,
             ),
           ),
           validator: validator,

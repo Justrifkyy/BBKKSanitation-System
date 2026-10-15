@@ -54,6 +54,74 @@ class SiskaraTheme {
   static const double radiusLg = 16;
   static const double radiusXl = 24;
 
+  // ─── Standardized Typography Scale ───────────────────────
+  // 1. Judul (Headings & Titles)
+  static TextStyle get titleScreen => GoogleFonts.inter(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: textPrimary,
+        letterSpacing: -0.3,
+      );
+
+  static TextStyle get titleSection => GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: textPrimary,
+        letterSpacing: -0.2,
+      );
+
+  static TextStyle get titleCard => GoogleFonts.inter(
+        fontSize: 14.5,
+        fontWeight: FontWeight.w600,
+        color: textPrimary,
+      );
+
+  // 2. Penjelasan & Teks Konten (Body, Subtitle, Meta)
+  static TextStyle get bodyPrimary => GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: textPrimary,
+        height: 1.45,
+      );
+
+  static TextStyle get bodySecondary => GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: textSecondary,
+        height: 1.4,
+      );
+
+  static TextStyle get caption => GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: textSecondary,
+      );
+
+  static TextStyle get badgeLabel => GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
+      );
+
+  // 3. Inputan Form
+  static TextStyle get inputLabel => GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: textPrimary,
+      );
+
+  static TextStyle get inputText => GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: textPrimary,
+      );
+
+  static TextStyle get inputHint => GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: textSecondary,
+      );
+
   // ─── Light Theme ────────────────────────────────────────
   static ThemeData get lightTheme {
     return ThemeData(
@@ -93,7 +161,7 @@ class SiskaraTheme {
         indicatorColor: primaryBlue.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => GoogleFonts.inter(
-            fontSize: 10,
+            fontSize: 11.5,
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w700
                 : FontWeight.w500,
@@ -107,16 +175,20 @@ class SiskaraTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          minimumSize: const Size(0, 42),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+          minimumSize: const Size(0, 44),
+          textStyle: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          minimumSize: const Size(0, 42),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+          minimumSize: const Size(0, 44),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
@@ -129,44 +201,49 @@ class SiskaraTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryBlue,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          minimumSize: const Size(0, 42),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
           side: const BorderSide(color: primaryBlue),
+          textStyle: GoogleFonts.inter(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusMd),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: divider),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusMd),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: divider),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusMd),
-          borderSide: const BorderSide(color: primaryBlue, width: 2),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: primaryBlue, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusMd),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: error),
         ),
-        labelStyle: GoogleFonts.inter(color: textSecondary),
-        hintStyle: GoogleFonts.inter(color: textSecondary),
+        labelStyle: GoogleFonts.inter(fontSize: 13, color: textSecondary),
+        hintStyle: GoogleFonts.inter(fontSize: 13, color: textSecondary.withValues(alpha: 0.7)),
       ),
       cardTheme: CardThemeData(
         color: surfaceLight,
-        elevation: 1,
+        elevation: 0.5,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusLg),
+          side: const BorderSide(color: divider, width: 0.8),
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
       ),
       dividerTheme: const DividerThemeData(
         color: divider,

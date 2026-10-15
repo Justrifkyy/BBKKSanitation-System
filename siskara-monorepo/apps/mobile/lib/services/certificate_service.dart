@@ -10,9 +10,9 @@ import '../models/checklist_template_model.dart';
 import '../models/submission_model.dart';
 
 class CertificateService {
-  static final CertificateService _instance = CertificateService._internal();
   factory CertificateService() => _instance;
   CertificateService._internal();
+  static final CertificateService _instance = CertificateService._internal();
 
   /// Generates the official A4 Certificate PDF and returns the file bytes.
   Future<Uint8List> generateCertificatePdf({
@@ -35,7 +35,7 @@ class CertificateService {
     }
 
     final isKapal = submission.isKapal;
-    final now = verifiedAt ?? submission.updatedAt ?? DateTime.now();
+    final now = verifiedAt ?? submission.updatedAt;
     final dateFormat = DateFormat('dd MMMM yyyy', 'id_ID');
     final timeFormat = DateFormat('HH:mm', 'id_ID');
     final tanggalStr = dateFormat.format(now);

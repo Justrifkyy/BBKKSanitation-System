@@ -26,15 +26,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       error: state.error ?? Exception('Route error'),
     ),
     redirect: (context, state) {
-      final profile = authState.valueOrNull;
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
 
+      // If user is not logged in to Firebase, immediately go to /login
+      final authService = ref.read(authServiceProvider);
+      if (authService.currentUser == null) {
+        return isAuthRoute ? null : '/login';
+      }
+
+      // Only show account error if user is logged in but profile failed
       if (authState.hasError) {
         return state.matchedLocation == '/account-error'
             ? null
             : '/account-error';
       }
+
+      final profile = authState.valueOrNull;
       if (profile == null) return isAuthRoute ? null : '/login';
       if (profile.isAdmin || (!profile.isKepala && !profile.isStaf)) {
         return '/unsupported';

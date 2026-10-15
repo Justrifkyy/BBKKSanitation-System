@@ -913,12 +913,12 @@ class _AnswerDetail extends StatelessWidget {
                 children: [
                   Text(
                     itemTitle,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: -0.2),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     itemCategory,
-                    style: const TextStyle(color: SiskaraTheme.textSecondary, fontSize: 10),
+                    style: const TextStyle(color: SiskaraTheme.textSecondary, fontSize: 12.5),
                   ),
                 ],
               ),
@@ -939,16 +939,16 @@ class _AnswerDetail extends StatelessWidget {
         if (answer.alasan != null && answer.alasan!.trim().isNotEmpty && !isTidakLayak) ...[
           const SizedBox(height: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
             decoration: BoxDecoration(
               color: SiskaraTheme.backgroundLight,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               'Catatan Nahkoda/Pilot: ${answer.alasan}',
               style: const TextStyle(
                 color: SiskaraTheme.textSecondary,
-                fontSize: 11,
+                fontSize: 12.5,
               ),
             ),
           ),
@@ -1025,7 +1025,7 @@ class _AnswerDetail extends StatelessWidget {
                 'GPS: ${evidence.latitude!.toStringAsFixed(5)}, ${evidence.longitude!.toStringAsFixed(5)} • ${evidence.timestamp.toLocal()}',
                 style: const TextStyle(
                   color: SiskaraTheme.textSecondary,
-                  fontSize: 9.5,
+                  fontSize: 11.5,
                 ),
               ),
             ),
@@ -1060,7 +1060,7 @@ class _AnswerDetail extends StatelessWidget {
                     const Text(
                       'Penilaian Staf BBKK: *',
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1068,7 +1068,7 @@ class _AnswerDetail extends StatelessWidget {
                     if (currentEvaluation != null)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: isLayak
                               ? SiskaraTheme.success
@@ -1079,7 +1079,7 @@ class _AnswerDetail extends StatelessWidget {
                           isLayak ? 'LAYAK' : 'TIDAK LAYAK',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 9.5,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1354,7 +1354,7 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
       ),
     );
   }
@@ -1579,7 +1579,7 @@ class _CertificateCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                          horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFF16A34A),
                         borderRadius: BorderRadius.circular(6),
@@ -1588,19 +1588,19 @@ class _CertificateCard extends StatelessWidget {
                         'SURAT RESMI TERBIT • FORMAT A4',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Text(
                       isKapal
                           ? 'Sertifikat Karantina Kesehatan Kapal (PHQC)'
                           : 'Surat Sanitasi Pesawat Udara (ASIC)',
                       style: const TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF14532D),
                       ),
@@ -1614,19 +1614,19 @@ class _CertificateCard extends StatelessWidget {
           const Divider(height: 1, color: Color(0xFFBBF7D0)),
           const SizedBox(height: 12),
           _buildInfoRow('Nomor Dokumen', docNumber),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           _buildInfoRow('Sarana Transportasi', namaSarana),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           _buildInfoRow(
             isKapal ? 'Nahkoda / Pemohon' : 'Pilot in Command',
             review.pengisiNama ?? 'Deklaran Pemohon',
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           _buildInfoRow(
             'Validator BBKK',
             review.verifikatorNama ?? 'Petugas Validasi BBKK Makassar',
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           _buildInfoRow(
             'Hasil Penilaian',
             'MEMENUHI PERSYARATAN (LAIK OPERASIONAL)',
@@ -1658,16 +1658,16 @@ class _CertificateCard extends StatelessWidget {
                 isDownloading
                     ? 'Menyiapkan & Mengunduh PDF...'
                     : 'Unduh Surat Kelayakan Sanitasi (A4 PDF)',
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           const Center(
             child: Text(
               'Dokumen A4 tersimpan di folder Download & dapat langsung dibuka/dicetak.',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 color: Color(0xFF166534),
                 fontStyle: FontStyle.italic,
               ),
@@ -1683,22 +1683,22 @@ class _CertificateCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 130,
+          width: 140,
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               color: Color(0xFF374151),
               fontWeight: FontWeight.w500,
             ),
           ),
         ),
-        const Text(': ', style: TextStyle(fontSize: 11, color: Color(0xFF374151))),
+        const Text(': ', style: TextStyle(fontSize: 13, color: Color(0xFF374151))),
         Expanded(
           child: Text(
             value,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13.5,
               fontWeight: isHighlight ? FontWeight.bold : FontWeight.w600,
               color: isHighlight ? const Color(0xFF15803D) : const Color(0xFF111827),
             ),

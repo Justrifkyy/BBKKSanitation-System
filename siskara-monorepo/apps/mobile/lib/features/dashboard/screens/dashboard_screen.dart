@@ -175,17 +175,18 @@ class _WelcomePanel extends StatelessWidget {
                           AppConstants.appName,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
+                            letterSpacing: 1.1,
                           ),
                         ),
                         Text(
                           'SANITASI TRANSPORTASI',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.68),
-                            fontSize: 8,
-                            letterSpacing: 0.65,
+                            color: Colors.white.withValues(alpha: 0.72),
+                            fontSize: 10,
+                            letterSpacing: 0.6,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -193,22 +194,22 @@ class _WelcomePanel extends StatelessWidget {
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
+                        horizontal: 9,
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
+                        color: Colors.white.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.18),
+                          color: Colors.white.withValues(alpha: 0.22),
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 6,
-                            height: 6,
+                            width: 6.5,
+                            height: 6.5,
                             decoration: const BoxDecoration(
                               color: Color(0xFF8DE0B4),
                               shape: BoxShape.circle,
@@ -219,9 +220,9 @@ class _WelcomePanel extends StatelessWidget {
                             'AKTIF',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 8,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.6,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
@@ -233,8 +234,8 @@ class _WelcomePanel extends StatelessWidget {
                 Text(
                   _greeting(),
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.76),
-                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.78),
+                    fontSize: 13,
                   ),
                 ),
                 Text(
@@ -243,11 +244,12 @@ class _WelcomePanel extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
-                    height: 1.2,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 21,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   user.isStaf
                       ? 'Petugas pemeriksaan BBKK'
@@ -255,24 +257,24 @@ class _WelcomePanel extends StatelessWidget {
                           ? 'Nahkoda • Pemeriksaan kapal'
                           : 'Pilot • Pemeriksaan pesawat',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.82),
-                    fontSize: 10,
+                    color: Colors.white.withValues(alpha: 0.86),
+                    fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 13),
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     Material(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(11),
+                      borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         onTap: () =>
                             context.go(user.isStaf ? '/review' : '/submission'),
-                        borderRadius: BorderRadius.circular(11),
+                        borderRadius: BorderRadius.circular(12),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 11,
-                            vertical: 8,
+                            horizontal: 14,
+                            vertical: 9,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -281,15 +283,15 @@ class _WelcomePanel extends StatelessWidget {
                                 user.isStaf ? 'Buka antrian' : 'Mulai skrining',
                                 style: const TextStyle(
                                   color: SiskaraTheme.primaryDark,
-                                  fontSize: 10,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              const SizedBox(width: 5),
+                              const SizedBox(width: 6),
                               const Icon(
                                 Icons.arrow_forward_rounded,
                                 color: SiskaraTheme.primaryDark,
-                                size: 14,
+                                size: 16,
                               ),
                             ],
                           ),
@@ -387,8 +389,8 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 82),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      constraints: const BoxConstraints(minHeight: 88),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
@@ -399,34 +401,35 @@ class _StatCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 27,
-                height: 27,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(icon, color: color, size: 15),
+                child: Icon(icon, color: color, size: 16),
               ),
               const Spacer(),
               Text(
                 value,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 21,
+                      fontSize: 22,
                       height: 1,
                       fontWeight: FontWeight.w800,
                     ),
               ),
             ],
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                  color: SiskaraTheme.textSecondary,
-                ),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: SiskaraTheme.textSecondary,
+            ),
           ),
         ],
       ),
@@ -439,7 +442,7 @@ class _StatisticsLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(
-        height: 83,
+        height: 88,
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
 }
@@ -452,28 +455,28 @@ class _StaffQueueSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
       decoration: BoxDecoration(
         color: SiskaraTheme.warning.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.notifications_active_outlined,
             color: SiskaraTheme.warning,
-            size: 19,
+            size: 20,
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               count == 0
                   ? 'Tidak ada pengajuan menunggu.'
                   : '$count pengajuan menunggu pemeriksaan.',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
-          const Icon(Icons.chevron_right, size: 19),
+          const Icon(Icons.chevron_right, size: 20),
         ],
       ),
     );
@@ -527,9 +530,9 @@ class _MenuGrid extends StatelessWidget {
       itemCount: menus.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 9,
-        crossAxisSpacing: 9,
-        mainAxisExtent: 112,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        mainAxisExtent: 124,
       ),
       itemBuilder: (context, index) => _MenuTile(item: menus[index]),
     );
@@ -561,16 +564,16 @@ class _MenuTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () => context.go(item.path),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: SiskaraTheme.divider.withValues(alpha: 0.7),
+              color: SiskaraTheme.divider.withValues(alpha: 0.75),
             ),
           ),
           child: Column(
@@ -579,19 +582,19 @@ class _MenuTile extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 31,
-                    height: 31,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
-                      color: item.color.withValues(alpha: 0.11),
+                      color: item.color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(item.icon, color: item.color, size: 17),
+                    child: Icon(item.icon, color: item.color, size: 18),
                   ),
                   const Spacer(),
                   Icon(
                     Icons.arrow_outward_rounded,
                     color: item.color.withValues(alpha: 0.8),
-                    size: 17,
+                    size: 18,
                   ),
                 ],
               ),
@@ -601,8 +604,9 @@ class _MenuTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.1,
                 ),
               ),
               const SizedBox(height: 3),
@@ -611,8 +615,8 @@ class _MenuTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 9,
-                  height: 1.2,
+                  fontSize: 12,
+                  height: 1.25,
                   color: SiskaraTheme.textSecondary,
                 ),
               ),
@@ -634,43 +638,45 @@ class _SignatureCard extends StatelessWidget {
     final isReady = user.hasSignature && user.hasPin;
     return Material(
       color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () => context.go('/signature-setup?update=true'),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: SiskaraTheme.divider.withValues(alpha: 0.7),
+              color: SiskaraTheme.divider.withValues(alpha: 0.75),
             ),
           ),
           child: Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: (isReady ? SiskaraTheme.success : SiskaraTheme.warning)
-                      .withValues(alpha: 0.11),
-                  borderRadius: BorderRadius.circular(12),
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(13),
                 ),
                 child: Icon(
                   Icons.draw_outlined,
                   color: isReady ? SiskaraTheme.success : SiskaraTheme.warning,
-                  size: 21,
+                  size: 22,
                 ),
               ),
-              const SizedBox(width: 11),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Tanda tangan digital',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -678,14 +684,14 @@ class _SignatureCard extends StatelessWidget {
                           ? 'Aktif • ketuk untuk memperbarui'
                           : 'Perlu dilengkapi sebelum digunakan',
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 12.5,
                         color: SiskaraTheme.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 19),
+              const Icon(Icons.chevron_right, size: 20),
             ],
           ),
         ),
@@ -707,17 +713,19 @@ class _SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 15.5,
+              color: SiskaraTheme.textPrimary,
+              letterSpacing: -0.2,
+            ),
           ),
         ),
         if (trailing != null)
           Text(
             trailing!,
             style: const TextStyle(
-              fontSize: 9,
+              fontSize: 12,
               color: SiskaraTheme.textSecondary,
             ),
           ),
@@ -734,14 +742,14 @@ class _InlineError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: SiskaraTheme.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         message,
-        style: const TextStyle(fontSize: 11, color: SiskaraTheme.error),
+        style: const TextStyle(fontSize: 12.5, color: SiskaraTheme.error),
       ),
     );
   }

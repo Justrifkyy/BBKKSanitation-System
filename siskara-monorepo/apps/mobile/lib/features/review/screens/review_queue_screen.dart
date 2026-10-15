@@ -389,33 +389,34 @@ class _SubmissionCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.1,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Text(
                       '${isKapal ? 'Kapal' : 'Pesawat'} • $origin',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: SiskaraTheme.textSecondary,
-                        fontSize: 10,
+                        fontSize: 13,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Text(
                       DateFormat('dd/MM/yyyy • HH:mm')
                           .format(submission.createdAt.toLocal()),
                       style: const TextStyle(
                         color: SiskaraTheme.textSecondary,
-                        fontSize: 9,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               const Icon(
                 Icons.chevron_right,
                 color: SiskaraTheme.textSecondary,
@@ -457,7 +458,7 @@ class _QueueEmpty extends StatelessWidget {
         const Text(
           'Belum ada pengajuan yang menunggu verifikasi.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: SiskaraTheme.textSecondary, fontSize: 12),
+          style: TextStyle(color: SiskaraTheme.textSecondary, fontSize: 13),
         ),
       ],
     );
@@ -474,14 +475,14 @@ class _ReadOnlyNote extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, size: 15, color: SiskaraTheme.textSecondary),
-          SizedBox(width: 7),
+          Icon(Icons.info_outline, size: 16, color: SiskaraTheme.textSecondary),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               'Keputusan bersifat final. Tanda tangan digital dan PIN diperlukan untuk setiap keputusan.',
               style: TextStyle(
                 color: SiskaraTheme.textSecondary,
-                fontSize: 10,
+                fontSize: 12,
                 height: 1.4,
               ),
             ),

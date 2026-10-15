@@ -9,6 +9,7 @@ import '../../../core/theme.dart';
 import '../../../core/error_message.dart';
 import '../../../services/storage_service.dart';
 import '../../../state/auth_state.dart';
+import '../../../state/submission_state.dart';
 
 class SignatureSetupScreen extends ConsumerStatefulWidget {
   const SignatureSetupScreen({super.key});
@@ -185,8 +186,14 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
   }
 
   Future<void> _signOut() async {
-    await ref.read(authServiceProvider).signOut();
-    if (mounted) context.go('/login');
+    try {
+      if (mounted) context.go('/login');
+      await ref.read(authServiceProvider).signOut();
+      ref.invalidate(authStateProvider);
+      ref.invalidate(userSubmissionsProvider);
+    } catch (_) {
+      if (mounted) context.go('/login');
+    }
   }
 
   void _showMessage(String message) {
@@ -416,7 +423,7 @@ class _SectionHeading extends StatelessWidget {
             number,
             style: const TextStyle(
               color: SiskaraTheme.accentTeal,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
