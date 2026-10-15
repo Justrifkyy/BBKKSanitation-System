@@ -23,167 +23,175 @@ const signatureTypes: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  const authResult = await verifyAuth(request, [
-    "kepala_kapal",
-    "kepala_penerbangan",
-    "staf_bbkk",
-  ]);
-  if ("error" in authResult) return authResult.error;
-  if (!isR2Configured()) {
-    return NextResponse.json(
-      { error: "Penyimpanan media belum dikonfigurasi di server." },
-      { status: 503 },
-    );
-  }
-
-  const body = (await request.json()) as Record<string, unknown>;
-  const purpose = body.purpose;
-  const contentType = body.content_type;
-  const size = body.size;
-
-  if (
-    typeof contentType !== "string" ||
-    typeof size !== "number" ||
-    !Number.isSafeInteger(size) ||
-    size <= 0
-  ) {
-    return NextResponse.json(
-      { error: "Jenis atau ukuran berkas tidak valid." },
-      { status: 400 },
-    );
-  }
-
-  if (purpose === "signature") {
-    if (
-      authResult.user.role === "kepala_kapal" ||
-      authResult.user.role === "kepala_penerbangan" ||
-      authResult.user.role === "staf_bbkk"
-    ) {
-      const extension =
-        typeof contentType === "string" ? signatureTypes[contentType] : null;
-      if (!extension || size > MAX_SIGNATURE_BYTES) {
-        return NextResponse.json(
-          { error: "Tanda tangan harus PNG atau SVG dengan ukuran maksimal 512 KB." },
-          { status: 400 },
-        );
-      }
-
-      const userRef = adminDb.collection(COLLECTIONS.USERS).doc(authResult.user.uid);
-      const userSnapshot = await userRef.get();
-      if (!userSnapshot.exists) {
-        return NextResponse.json(
-          { error: "Profil pengguna tidak ditemukan." },
-          { status: 404 },
-        );
-      }
-      const key = `staging/signatures/${authResult.user.uid}/${randomUUID()}.${extension}`;
-      return NextResponse.json({
-        upload_url: await createUploadUrl(key, {
-          contentLength: size,
-          contentType,
-        }),
-        storage_path: storagePath(key),
-        required_headers: {
-          "Content-Type": contentType,
-          "Content-Length": String(size),
-        },
-      });
+  try {
+    const authResult = await verifyAuth(request, [
+      "kepala_kapal",
+      "kepala_penerbangan",
+      "staf_bbkk",
+    ]);
+    if ("error" in authResult) return authResult.error;
+    if (!isR2Configured()) {
+      return NextResponse.json(
+        { error: "Penyimpanan media Cloudflare R2 belum dikonfigurasi di server. Pastikan variabel R2_* diatur di Vercel." },
+        { status: 503 },
+      );
     }
-  }
 
-  if (purpose !== "evidence") {
-    return NextResponse.json(
-      { error: "Tujuan unggah tidak valid." },
-      { status: 400 },
-    );
-  }
-  if (
-    authResult.user.role !== "kepala_kapal" &&
-    authResult.user.role !== "kepala_penerbangan"
-  ) {
-    return NextResponse.json(
-      { error: "Hanya Nahkoda atau Pilot yang dapat mengunggah bukti." },
-      { status: 403 },
-    );
-  }
+    const body = (await request.json()) as Record<string, unknown>;
+    const purpose = body.purpose;
+    const contentType = body.content_type;
+    const size = body.size;
 
-  const maxSize = contentType.startsWith("video/")
-    ? MAX_VIDEO_BYTES
-    : MAX_PHOTO_BYTES;
-  const extension = evidenceTypes[contentType];
-  if (!extension || size > maxSize) {
-    return NextResponse.json(
-      { error: "Jenis berkas tidak didukung atau ukuran berkas terlalu besar." },
-      { status: 400 },
-    );
-  }
+    if (
+      typeof contentType !== "string" ||
+      typeof size !== "number" ||
+      !Number.isSafeInteger(size) ||
+      size <= 0
+    ) {
+      return NextResponse.json(
+        { error: "Jenis atau ukuran berkas tidak valid." },
+        { status: 400 },
+      );
+    }
 
-  const submissionId = body.submission_id;
-  const answerId = body.answer_id;
-  if (
-    typeof submissionId !== "string" ||
-    !ID_PATTERN.test(submissionId) ||
-    typeof answerId !== "string" ||
-    !ID_PATTERN.test(answerId)
-  ) {
-    return NextResponse.json(
-      { error: "Identitas pengajuan atau jawaban tidak valid." },
-      { status: 400 },
-    );
-  }
+    if (purpose === "signature") {
+      if (
+        authResult.user.role === "kepala_kapal" ||
+        authResult.user.role === "kepala_penerbangan" ||
+        authResult.user.role === "staf_bbkk"
+      ) {
+        const extension =
+          typeof contentType === "string" ? signatureTypes[contentType] : null;
+        if (!extension || size > MAX_SIGNATURE_BYTES) {
+          return NextResponse.json(
+            { error: "Tanda tangan harus PNG atau SVG dengan ukuran maksimal 512 KB." },
+            { status: 400 },
+          );
+        }
 
-  const submissionRef = adminDb
-    .collection(COLLECTIONS.SUBMISSIONS)
-    .doc(submissionId);
-  const [submissionSnapshot, answerSnapshot] = await Promise.all([
-    submissionRef.get(),
-    submissionRef
-      .collection(COLLECTIONS.SUBMISSION_ANSWERS)
-      .doc(answerId)
-      .get(),
-  ]);
-  if (!submissionSnapshot.exists) {
-    return NextResponse.json(
-      { error: "Pengajuan tidak ditemukan." },
-      { status: 404 },
-    );
-  }
+        const userRef = adminDb.collection(COLLECTIONS.USERS).doc(authResult.user.uid);
+        const userSnapshot = await userRef.get();
+        if (!userSnapshot.exists) {
+          return NextResponse.json(
+            { error: "Profil pengguna tidak ditemukan." },
+            { status: 404 },
+          );
+        }
+        const key = `staging/signatures/${authResult.user.uid}/${randomUUID()}.${extension}`;
+        return NextResponse.json({
+          upload_url: await createUploadUrl(key, {
+            contentLength: size,
+            contentType,
+          }),
+          storage_path: storagePath(key),
+          required_headers: {
+            "Content-Type": contentType,
+            "Content-Length": String(size),
+          },
+        });
+      }
+    }
 
-  const submission = submissionSnapshot.data()!;
-  const expectedMode =
-    authResult.user.role === "kepala_kapal" ? "kapal" : "pesawat";
-  if (
-    submission.pengisi_id !== authResult.user.uid ||
-    submission.moda_transportasi !== expectedMode
-  ) {
-    return NextResponse.json(
-      { error: "Pengajuan ini bukan milik akun atau moda transportasi Anda." },
-      { status: 403 },
-    );
-  }
-  if (submission.status !== "draft") {
-    return NextResponse.json(
-      { error: "Bukti hanya dapat diunggah untuk pengajuan draft." },
-      { status: 409 },
-    );
-  }
-  if (!answerSnapshot.exists) {
-    return NextResponse.json(
-      { error: "Jawaban checklist belum tersimpan." },
-      { status: 409 },
-    );
-  }
+    if (purpose !== "evidence") {
+      return NextResponse.json(
+        { error: "Tujuan unggah tidak valid." },
+        { status: 400 },
+      );
+    }
+    if (
+      authResult.user.role !== "kepala_kapal" &&
+      authResult.user.role !== "kepala_penerbangan"
+    ) {
+      return NextResponse.json(
+        { error: "Hanya Nahkoda atau Pilot yang dapat mengunggah bukti." },
+        { status: 403 },
+      );
+    }
 
-  const key = `staging/submissions/${submissionId}/answers/${answerId}/${randomUUID()}.${extension}`;
-  return NextResponse.json({
-    upload_url: await createUploadUrl(key, {
-      contentLength: size,
-      contentType,
-    }),
-    storage_path: storagePath(key),
-    required_headers: {
-      "Content-Type": contentType,
-      "Content-Length": String(size),
-    },
-  });
+    const maxSize = contentType.startsWith("video/")
+      ? MAX_VIDEO_BYTES
+      : MAX_PHOTO_BYTES;
+    const extension = evidenceTypes[contentType];
+    if (!extension || size > maxSize) {
+      return NextResponse.json(
+        { error: "Jenis berkas tidak didukung atau ukuran berkas terlalu besar." },
+        { status: 400 },
+      );
+    }
+
+    const submissionId = body.submission_id;
+    const answerId = body.answer_id;
+    if (
+      typeof submissionId !== "string" ||
+      !ID_PATTERN.test(submissionId) ||
+      typeof answerId !== "string" ||
+      !ID_PATTERN.test(answerId)
+    ) {
+      return NextResponse.json(
+        { error: "Identitas pengajuan atau jawaban tidak valid." },
+        { status: 400 },
+      );
+    }
+
+    const submissionRef = adminDb
+      .collection(COLLECTIONS.SUBMISSIONS)
+      .doc(submissionId);
+    const [submissionSnapshot, answerSnapshot] = await Promise.all([
+      submissionRef.get(),
+      submissionRef
+        .collection(COLLECTIONS.SUBMISSION_ANSWERS)
+        .doc(answerId)
+        .get(),
+    ]);
+    if (!submissionSnapshot.exists) {
+      return NextResponse.json(
+        { error: "Pengajuan tidak ditemukan." },
+        { status: 404 },
+      );
+    }
+
+    const submission = submissionSnapshot.data()!;
+    const expectedMode =
+      authResult.user.role === "kepala_kapal" ? "kapal" : "pesawat";
+    if (
+      submission.pengisi_id !== authResult.user.uid ||
+      submission.moda_transportasi !== expectedMode
+    ) {
+      return NextResponse.json(
+        { error: "Pengajuan ini bukan milik akun atau moda transportasi Anda." },
+        { status: 403 },
+      );
+    }
+    if (submission.status !== "draft") {
+      return NextResponse.json(
+        { error: "Bukti hanya dapat diunggah untuk pengajuan draft." },
+        { status: 409 },
+      );
+    }
+    if (!answerSnapshot.exists) {
+      return NextResponse.json(
+        { error: "Jawaban checklist belum tersimpan." },
+        { status: 409 },
+      );
+    }
+
+    const key = `staging/submissions/${submissionId}/answers/${answerId}/${randomUUID()}.${extension}`;
+    return NextResponse.json({
+      upload_url: await createUploadUrl(key, {
+        contentLength: size,
+        contentType,
+      }),
+      storage_path: storagePath(key),
+      required_headers: {
+        "Content-Type": contentType,
+        "Content-Length": String(size),
+      },
+    });
+  } catch (error) {
+    console.error("Presign upload error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Gagal menyiapkan tautan unggah media." },
+      { status: 500 },
+    );
+  }
 }

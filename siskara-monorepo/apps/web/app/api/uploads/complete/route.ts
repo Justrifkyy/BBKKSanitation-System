@@ -24,17 +24,18 @@ const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  const authResult = await verifyAuth(request, [
-    "kepala_kapal",
-    "kepala_penerbangan",
-  ]);
-  if ("error" in authResult) return authResult.error;
-  if (!isR2Configured()) {
-    return NextResponse.json(
-      { error: "Penyimpanan bukti media belum dikonfigurasi di server." },
-      { status: 503 },
-    );
-  }
+  try {
+    const authResult = await verifyAuth(request, [
+      "kepala_kapal",
+      "kepala_penerbangan",
+    ]);
+    if ("error" in authResult) return authResult.error;
+    if (!isR2Configured()) {
+      return NextResponse.json(
+        { error: "Penyimpanan bukti media Cloudflare R2 belum dikonfigurasi di server. Pastikan variabel R2_* diatur di Vercel." },
+        { status: 503 },
+      );
+    }
 
   const body = (await request.json()) as Record<string, unknown>;
   if (
@@ -150,8 +151,15 @@ export async function POST(request: NextRequest) {
     timestamp: Timestamp.fromDate(captureTime),
   });
 
-  return NextResponse.json({
-    success: true,
-    storage_path: storagePath(permanentKey),
-  });
+    return NextResponse.json({
+      success: true,
+      storage_path: storagePath(permanentKey),
+    });
+  } catch (error) {
+    console.error("Complete upload error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Gagal menyelesaikan proses unggah media." },
+      { status: 500 },
+    );
+  }
 }

@@ -33,18 +33,19 @@ function isValidSignatureSvg(bytes: Uint8Array): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await verifyAuth(request, [
-    "kepala_kapal",
-    "kepala_penerbangan",
-    "staf_bbkk",
-  ]);
-  if ("error" in authResult) return authResult.error;
-  if (!isR2Configured()) {
-    return NextResponse.json(
-      { error: "Penyimpanan tanda tangan belum dikonfigurasi di server." },
-      { status: 503 },
-    );
-  }
+  try {
+    const authResult = await verifyAuth(request, [
+      "kepala_kapal",
+      "kepala_penerbangan",
+      "staf_bbkk",
+    ]);
+    if ("error" in authResult) return authResult.error;
+    if (!isR2Configured()) {
+      return NextResponse.json(
+        { error: "Penyimpanan tanda tangan Cloudflare R2 belum dikonfigurasi di server. Pastikan variabel R2_* diatur di Vercel." },
+        { status: 503 },
+      );
+    }
 
   const body = (await request.json()) as { signature_url?: unknown };
   if (typeof body.signature_url !== "string") {
@@ -162,5 +163,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Signature save error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Gagal memperbarui tanda tangan." },
+      { status: 500 },
+    );
+  }
 }
