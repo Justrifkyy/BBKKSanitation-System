@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { isFirebaseAdminConfigured } from '@/lib/firebase-admin';
 import { isR2Configured } from '@/lib/r2';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET() {
   const envStatus = {
     FIREBASE_PROJECT_ID: Boolean(process.env.FIREBASE_PROJECT_ID),
