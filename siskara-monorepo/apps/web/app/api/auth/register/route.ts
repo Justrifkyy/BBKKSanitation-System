@@ -1,10 +1,17 @@
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminAuth, adminDb, isFirebaseAdminConfigured } from "@/lib/firebase-admin";
 import { COLLECTIONS } from "@/lib/constants";
 import { NextRequest, NextResponse } from "next/server";
 
 const SELF_REGISTERED_ROLES = ["kepala_kapal", "kepala_penerbangan"] as const;
 
 export async function POST(request: NextRequest) {
+  if (!isFirebaseAdminConfigured()) {
+    return NextResponse.json(
+      { error: "Layanan autentikasi server belum siap. Pastikan konfigurasi Firebase Admin telah diatur di Vercel." },
+      { status: 503 },
+    );
+  }
+
   const body = (await request.json()) as Record<string, unknown>;
   const { email, password, nama, phone, role, id_number } = body;
 
@@ -72,7 +79,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    throw error;
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Gagal membuat akun autentikasi." },
+      { status: 500 },
+    );
   }
 
   try {
@@ -102,6 +112,9 @@ export async function POST(request: NextRequest) {
     } catch (cleanupError) {
       console.error("Unable to roll back incomplete self-registration", cleanupError);
     }
-    throw error;
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Gagal menyimpan data pengguna ke database." },
+      { status: 500 },
+    );
   }
 }

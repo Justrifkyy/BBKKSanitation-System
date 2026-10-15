@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from './firebase-admin';
+import { adminAuth, adminDb, isFirebaseAdminConfigured } from './firebase-admin';
 
 export type UserRole = 'kepala_kapal' | 'kepala_penerbangan' | 'staf_bbkk' | 'validator_admin';
 
@@ -17,6 +17,15 @@ export async function verifyAuth(
   request: NextRequest,
   allowedRoles?: UserRole[]
 ): Promise<{ user: AuthenticatedUser } | { error: NextResponse }> {
+  if (!isFirebaseAdminConfigured()) {
+    return {
+      error: NextResponse.json(
+        { error: 'Server authentication service not configured' },
+        { status: 503 }
+      ),
+    };
+  }
+
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -32,7 +41,24 @@ export async function verifyAuth(
 
   try {
     const decodedToken = await adminAuth.verifyIdToken(token);
-    const role = decodedToken.role as UserRole | undefined;
+    let role = decodedToken.role as UserRole | undefined;
+
+    // Fallback: check Firestore users collection if custom claims are not yet set
+    if (!role) {
+      try {
+        const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+        if (userDoc.exists) {
+          const docRole = userDoc.data()?.role as UserRole | undefined;
+          if (docRole) {
+            role = docRole;
+            // Best effort: sync custom claim for future requests
+            adminAuth.setCustomUserClaims(decodedToken.uid, { role: docRole }).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('Could not read user role from Firestore fallback:', err);
+      }
+    }
 
     if (!role) {
       return {

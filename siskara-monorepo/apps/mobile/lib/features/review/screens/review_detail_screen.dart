@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../../core/error_message.dart';
 import '../../../core/widgets/app_bottom_nav.dart';
+import '../../../core/widgets/interactive_photo_viewer.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
 import '../../../services/firestore_service.dart';
@@ -28,6 +29,9 @@ class ReviewDetailScreen extends ConsumerStatefulWidget {
 class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   late Future<_ReviewData?> _reviewFuture;
   bool _isSavingDecision = false;
+  final Map<String, String> _evaluations = {}; // answerId -> 'layak' | 'tidak_layak'
+  final Map<String, TextEditingController> _reasonControllers = {};
+  bool _hasInitializedEvaluations = false;
 
   @override
   void initState() {
@@ -36,7 +40,80 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
         ref.read(firestoreServiceProvider).loadReviewData(widget.submissionId);
   }
 
-  Future<void> _decide(String decision) async {
+  @override
+  void dispose() {
+    for (final controller in _reasonControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _initEvaluations(_ReviewData review) {
+    if (_hasInitializedEvaluations) return;
+    _hasInitializedEvaluations = true;
+
+    for (final answer in review.answers) {
+      if (answer.nilaiJawaban == 'layak' || answer.nilaiJawaban == 'tidak_layak') {
+        _evaluations[answer.id] = answer.nilaiJawaban;
+      }
+      _reasonControllers[answer.id] = TextEditingController(
+        text: answer.alasan ?? '',
+      );
+    }
+  }
+
+  Future<void> _decide(String decision, _ReviewData review) async {
+    // If approving, make sure staff has evaluated all checklist items
+    if (decision == 'approve') {
+      final unEvaluatedCount = review.answers
+          .where((a) => !_evaluations.containsKey(a.id))
+          .length;
+
+      if (unEvaluatedCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Harap nilai semua area pemeriksaan sebelum menyetujui. '
+              '(${_evaluations.length}/${review.answers.length} selesai)',
+            ),
+            backgroundColor: SiskaraTheme.warning,
+          ),
+        );
+        return;
+      }
+
+      final tidakLayakCount =
+          _evaluations.values.where((v) => v == 'tidak_layak').length;
+      if (tidakLayakCount > 0) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Terdapat Temuan Tidak Layak'),
+            content: Text(
+              'Ada $tidakLayakCount area pemeriksaan yang Anda nilai "Tidak Layak". '
+              'Pengajuan dengan temuan tidak layak sebaiknya ditolak untuk perbaikan oleh Nahkoda/Pilot. '
+              'Apakah Anda yakin ingin tetap melanjutkan penolakan atau revisi?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: FilledButton.styleFrom(backgroundColor: SiskaraTheme.error),
+                child: const Text('Tolak Pengajuan'),
+              ),
+            ],
+          ),
+        );
+        if (proceed == true) {
+          _decide('reject', review);
+        }
+        return;
+      }
+    }
+
     final result = await showDialog<_ReviewDecision>(
       context: context,
       barrierDismissible: false,
@@ -46,6 +123,29 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
 
     setState(() => _isSavingDecision = true);
     try {
+      final firestore = ref.read(firestoreServiceProvider);
+
+      // Save staff evaluations for each item to Firestore
+      for (final answer in review.answers) {
+        final eval = _evaluations[answer.id] ?? 'layak';
+        final reason = _reasonControllers[answer.id]?.text.trim() ?? '';
+        final templateItem = review.items[answer.templateItemId];
+        await firestore.saveAnswerForItem(
+          submissionId: widget.submissionId,
+          itemId: answer.templateItemId,
+          answer: {
+            'submission_id': widget.submissionId,
+            'template_item_id': answer.templateItemId,
+            'kategori': templateItem?.kategori ?? '',
+            'label': templateItem?.label ?? '',
+            'nilai_jawaban': eval,
+            'alasan': reason.isNotEmpty ? reason : null,
+            'status_gagal': eval == 'tidak_layak',
+          },
+        );
+      }
+
+      // Verify and sign officially
       await ref.read(authServiceProvider).verifySubmission(
             submissionId: widget.submissionId,
             decision: decision,
@@ -85,9 +185,12 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).valueOrNull;
+    final isStaff = user?.isStaf == true;
+    final canEvaluate = isStaff && !widget.readOnly;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.readOnly ? 'Detail pengajuan' : 'Detail pemeriksaan'),
+        title: Text(widget.readOnly ? 'Detail pengajuan' : 'Pemeriksaan Sanitasi'),
       ),
       body: FutureBuilder<_ReviewData?>(
         future: _reviewFuture,
@@ -114,13 +217,90 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
             );
           }
 
+          if (canEvaluate) {
+            _initEvaluations(review);
+          }
+
+          final totalItems = review.answers.length;
+          final evaluatedCount = _evaluations.length;
+          final tidakLayakCount =
+              _evaluations.values.where((v) => v == 'tidak_layak').length;
+
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
             children: [
               _SubmissionHeader(submission: review.submission),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
+
+              // Staff Evaluation Guidance Banner
+              if (canEvaluate) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: evaluatedCount == totalItems
+                        ? (tidakLayakCount == 0
+                            ? SiskaraTheme.success.withValues(alpha: 0.1)
+                            : SiskaraTheme.warning.withValues(alpha: 0.12))
+                        : SiskaraTheme.primaryBlue.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: evaluatedCount == totalItems
+                          ? (tidakLayakCount == 0
+                              ? SiskaraTheme.success
+                              : SiskaraTheme.warning)
+                          : SiskaraTheme.primaryBlue.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        evaluatedCount == totalItems
+                            ? (tidakLayakCount == 0
+                                ? Icons.verified_rounded
+                                : Icons.warning_amber_rounded)
+                            : Icons.rate_review_outlined,
+                        color: evaluatedCount == totalItems
+                            ? (tidakLayakCount == 0
+                                ? SiskaraTheme.success
+                                : SiskaraTheme.warning)
+                            : SiskaraTheme.primaryDark,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Progres Penilaian: $evaluatedCount dari $totalItems area dinilai',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              tidakLayakCount > 0
+                                  ? '$tidakLayakCount area dinilai Tidak Layak'
+                                  : evaluatedCount == totalItems
+                                      ? 'Semua area dinilai Layak'
+                                      : 'Periksa foto setiap area lalu tentukan status Layak / Tidak Layak.',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: SiskaraTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+
               _SectionCard(
-                title: 'Data umum',
+                title: 'Data umum transportasi',
                 icon: Icons.directions_boat_outlined,
                 child: Column(
                   children: [
@@ -133,28 +313,44 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                 ),
               ),
               const SizedBox(height: 14),
+
               _SectionCard(
-                title: 'Hasil checklist',
-                icon: Icons.fact_check_outlined,
+                title: 'Foto Bukti & Penilaian Sanitasi',
+                icon: Icons.photo_library_outlined,
                 child: review.answers.isEmpty
-                    ? const Text('Belum ada jawaban checklist.')
+                    ? const Text('Belum ada data area pemeriksaan.')
                     : Column(
                         children: [
                           for (var index = 0;
                               index < review.answers.length;
                               index++) ...[
-                            if (index > 0) const Divider(height: 20),
+                            if (index > 0) const Divider(height: 24),
                             _AnswerDetail(
                               answer: review.answers[index],
                               item: review
                                   .items[review.answers[index].templateItemId],
                               media: review.media[review.answers[index].id] ??
                                   const [],
+                              readOnly: !canEvaluate,
+                              currentEvaluation:
+                                  _evaluations[review.answers[index].id],
+                              reasonController:
+                                  _reasonControllers[review.answers[index].id],
+                              onEvaluate: (status) {
+                                setState(() {
+                                  _evaluations[review.answers[index].id] =
+                                      status;
+                                });
+                              },
+                              onReasonChanged: (reason) {
+                                // Controller maintains the text
+                              },
                             ),
                           ],
                         ],
                       ),
               ),
+
               if (review.submission.status == 'ditolak_otomatis') ...[
                 const SizedBox(height: 14),
                 const _NoticeCard(
@@ -185,11 +381,11 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
           FutureBuilder<_ReviewData?>(
             future: _reviewFuture,
             builder: (context, snapshot) {
-              if (widget.readOnly || user?.isStaf != true) {
+              final review = snapshot.data;
+              if (widget.readOnly || !isStaff || review == null) {
                 return const SizedBox.shrink();
               }
-              if (snapshot.data?.submission.status !=
-                  'menunggu_verifikasi_staf') {
+              if (review.submission.status != 'menunggu_verifikasi_staf') {
                 return const SizedBox.shrink();
               }
               return SafeArea(
@@ -208,7 +404,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _isSavingDecision
                               ? null
-                              : () => _decide('reject'),
+                              : () => _decide('reject', review),
                           icon: const Icon(Icons.close, size: 18),
                           label: const Text('Tolak / revisi'),
                           style: OutlinedButton.styleFrom(
@@ -218,23 +414,23 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: FilledButton.icon(
                           onPressed: _isSavingDecision
                               ? null
-                              : () => _decide('approve'),
+                              : () => _decide('approve', review),
                           icon: _isSavingDecision
                               ? const SizedBox(
-                                  width: 17,
-                                  height: 17,
+                                  width: 18,
+                                  height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     color: Colors.white,
                                   ),
                                 )
                               : const Icon(Icons.check, size: 18),
-                          label: const Text('Setujui'),
+                          label: const Text('Setujui & Terbitkan'),
                           style: FilledButton.styleFrom(
                             backgroundColor: SiskaraTheme.success,
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -353,8 +549,8 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
           children: [
             Text(
               approving
-                  ? 'Keputusan ini bersifat final dan dokumen resmi akan dibuat.'
-                  : 'Tuliskan temuan yang harus diperbaiki. Keputusan ini bersifat final.',
+                  ? 'Keputusan ini bersifat final dan dokumen resmi (PHQC / Berkas Verifikasi) akan langsung diterbitkan.'
+                  : 'Tuliskan temuan atau catatan yang harus diperbaiki oleh Nahkoda/Pilot.',
             ),
             if (!approving) ...[
               const SizedBox(height: 14),
@@ -363,7 +559,7 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
                 minLines: 2,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  labelText: 'Catatan / alasan penolakan',
+                  labelText: 'Catatan / alasan penolakan *',
                   alignLabelWithHint: true,
                 ),
               ),
@@ -376,7 +572,7 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
               maxLength: 6,
               obscureText: true,
               decoration: const InputDecoration(
-                labelText: 'PIN konfirmasi',
+                labelText: 'PIN konfirmasi staf',
                 prefixIcon: Icon(Icons.pin_outlined),
                 counterText: '',
               ),
@@ -398,10 +594,10 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
         ),
         FilledButton(
           onPressed: _confirm,
-          style: approving
-              ? FilledButton.styleFrom(backgroundColor: SiskaraTheme.success)
-              : FilledButton.styleFrom(backgroundColor: SiskaraTheme.error),
-          child: Text(approving ? 'Konfirmasi setujui' : 'Konfirmasi tolak'),
+          style: FilledButton.styleFrom(
+            backgroundColor: approving ? SiskaraTheme.success : SiskaraTheme.error,
+          ),
+          child: Text(approving ? 'Konfirmasi persetujuan' : 'Kirim penolakan'),
         ),
       ],
     );
@@ -414,47 +610,55 @@ class _SubmissionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = submission.dataUmum['nama_kapal'] ??
-        submission.dataUmum['nomor_penerbangan'] ??
-        'Pengajuan sanitasi';
+    final data = submission.dataUmum;
+    final title = submission.isKapal
+        ? (data['nama_kapal']?.toString() ?? 'Kapal')
+        : (data['nomor_penerbangan']?.toString() ?? 'Penerbangan');
+    final subtitle = submission.isKapal
+        ? 'Bendera: ${data['bendera'] ?? '-'} • Tiba: ${data['tanggal_jam_tiba'] ?? '-'}'
+        : 'Rute: ${data['rute'] ?? '-'} • Tiba: ${data['tanggal_jam_tiba'] ?? '-'}';
+
     return Container(
-      padding: const EdgeInsets.all(17),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SiskaraTheme.primaryBlue,
-        borderRadius: BorderRadius.circular(16),
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SiskaraTheme.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                submission.isKapal
-                    ? Icons.directions_boat_outlined
-                    : Icons.flight_outlined,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 9),
-              Expanded(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: SiskaraTheme.primaryDark.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Text(
-                  '$title',
+                  submission.isKapal ? 'MODA LAUT' : 'MODA UDARA',
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
+                    fontSize: 10,
                     fontWeight: FontWeight.w700,
+                    color: SiskaraTheme.primaryDark,
                   ),
                 ),
               ),
+              const Spacer(),
+              _StatusChip(status: submission.status),
             ],
           ),
-          const SizedBox(height: 9),
-          Text(
-            '${submission.isKapal ? 'Kapal' : 'Pesawat'} • ${submission.createdAt.toLocal()}',
-            style:
-                TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
-          ),
           const SizedBox(height: 10),
-          _StatusChip(status: submission.status),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(color: SiskaraTheme.textSecondary, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -474,7 +678,7 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
@@ -485,12 +689,19 @@ class _SectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: SiskaraTheme.primaryBlue, size: 19),
+              Icon(icon, size: 18, color: SiskaraTheme.primaryDark),
               const SizedBox(width: 8),
-              Text(title, style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: SiskaraTheme.primaryDark,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 13),
+          const SizedBox(height: 14),
           child,
         ],
       ),
@@ -506,7 +717,7 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -516,17 +727,17 @@ class _DetailRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 color: SiskaraTheme.textSecondary,
-                fontSize: 11,
+                fontSize: 12,
               ),
             ),
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 8),
           Expanded(
             flex: 6,
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -540,60 +751,100 @@ class _AnswerDetail extends StatelessWidget {
     required this.answer,
     required this.item,
     required this.media,
+    required this.readOnly,
+    this.currentEvaluation,
+    this.reasonController,
+    this.onEvaluate,
+    this.onReasonChanged,
   });
+
   final SubmissionAnswerModel answer;
   final ChecklistTemplateItemModel? item;
   final List<SubmissionAnswerMediaModel> media;
+  final bool readOnly;
+  final String? currentEvaluation;
+  final TextEditingController? reasonController;
+  final ValueChanged<String>? onEvaluate;
+  final ValueChanged<String>? onReasonChanged;
 
   @override
   Widget build(BuildContext context) {
-    final failed = item?.isFailValue(answer.nilaiJawaban) ?? answer.statusGagal;
-    final resultStatus = !failed
-        ? 'final'
-        : item?.autoRejectOnFail == true
-            ? 'ditolak_otomatis'
-            : 'menunggu_verifikasi_staf';
+    final itemTitle = item?.label ?? answer.templateItemId;
+    final itemCategory = item?.kategori ?? 'Pemeriksaan';
+    final eval = currentEvaluation ?? answer.nilaiJawaban;
+    final isLayak = eval == 'layak';
+    final isTidakLayak = eval == 'tidak_layak';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Title & Category
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Text(
-                item?.label ?? answer.templateItemId,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    itemTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    itemCategory,
+                    style: const TextStyle(color: SiskaraTheme.textSecondary, fontSize: 10),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
             _StatusChip(
-              status: resultStatus,
-              customLabel: _answerLabel(answer.nilaiJawaban),
+              status: isLayak
+                  ? 'final'
+                  : isTidakLayak
+                      ? 'ditolak_staf'
+                      : 'menunggu_verifikasi_staf',
+              customLabel: _answerLabel(eval),
             ),
           ],
         ),
-        if (answer.alasan != null && answer.alasan!.trim().isNotEmpty) ...[
-          const SizedBox(height: 7),
-          Text(
-            'Alasan: ${answer.alasan}',
-            style: const TextStyle(
-              color: SiskaraTheme.textSecondary,
-              fontSize: 11,
-              height: 1.4,
+
+        // Catatan dari Nahkoda/Pilot (jika ada)
+        if (answer.alasan != null && answer.alasan!.trim().isNotEmpty && !isTidakLayak) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: SiskaraTheme.backgroundLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'Catatan Nahkoda/Pilot: ${answer.alasan}',
+              style: const TextStyle(
+                color: SiskaraTheme.textSecondary,
+                fontSize: 11,
+              ),
             ),
           ),
         ],
+
+        // Foto Bukti (Bisa Ditekan, Zoom, & Download)
         for (final evidence in media) ...[
           const SizedBox(height: 10),
           if (evidence.tipe == 'foto')
             _EvidenceImage(
               storagePath: evidence.fileUrl,
+              title: itemTitle,
+              subtitle: itemCategory,
+              latitude: evidence.latitude,
+              longitude: evidence.longitude,
+              timestamp: evidence.timestamp,
             )
           else
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(13),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: SiskaraTheme.backgroundLight,
                 borderRadius: BorderRadius.circular(10),
@@ -630,8 +881,7 @@ class _AnswerDetail extends StatelessWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              'Bukti tidak dapat dibuka: '
-                              '${ErrorMessage.from(error)}',
+                              'Bukti tidak dapat dibuka: ${ErrorMessage.from(error)}',
                             ),
                             backgroundColor: SiskaraTheme.error,
                           ),
@@ -645,15 +895,160 @@ class _AnswerDetail extends StatelessWidget {
             ),
           if (evidence.latitude != null && evidence.longitude != null)
             Padding(
-              padding: const EdgeInsets.only(top: 5),
+              padding: const EdgeInsets.only(top: 4, left: 2),
               child: Text(
-                'Lokasi ${evidence.latitude!.toStringAsFixed(5)}, ${evidence.longitude!.toStringAsFixed(5)} • ${evidence.timestamp.toLocal()}',
+                'GPS: ${evidence.latitude!.toStringAsFixed(5)}, ${evidence.longitude!.toStringAsFixed(5)} • ${evidence.timestamp.toLocal()}',
                 style: const TextStyle(
                   color: SiskaraTheme.textSecondary,
-                  fontSize: 9,
+                  fontSize: 9.5,
                 ),
               ),
             ),
+        ],
+
+        // Staf BBKK Evaluation Section (Input Layak / Tidak Layak)
+        if (!readOnly && onEvaluate != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isLayak
+                  ? SiskaraTheme.success.withValues(alpha: 0.05)
+                  : isTidakLayak
+                      ? SiskaraTheme.error.withValues(alpha: 0.05)
+                      : SiskaraTheme.backgroundLight,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isLayak
+                    ? SiskaraTheme.success
+                    : isTidakLayak
+                        ? SiskaraTheme.error
+                        : SiskaraTheme.divider,
+                width: isLayak || isTidakLayak ? 1.5 : 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'Penilaian Staf BBKK: *',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (currentEvaluation != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isLayak
+                              ? SiskaraTheme.success
+                              : SiskaraTheme.error,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          isLayak ? 'LAYAK' : 'TIDAK LAYAK',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => onEvaluate!('layak'),
+                        icon: Icon(
+                          Icons.check_circle_outline,
+                          size: 16,
+                          color: isLayak ? Colors.white : SiskaraTheme.success,
+                        ),
+                        label: const Text('Layak'),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor:
+                              isLayak ? SiskaraTheme.success : null,
+                          foregroundColor:
+                              isLayak ? Colors.white : SiskaraTheme.success,
+                          side: const BorderSide(color: SiskaraTheme.success),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => onEvaluate!('tidak_layak'),
+                        icon: Icon(
+                          Icons.cancel_outlined,
+                          size: 16,
+                          color: isTidakLayak ? Colors.white : SiskaraTheme.error,
+                        ),
+                        label: const Text('Tidak Layak'),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor:
+                              isTidakLayak ? SiskaraTheme.error : null,
+                          foregroundColor:
+                              isTidakLayak ? Colors.white : SiskaraTheme.error,
+                          side: const BorderSide(color: SiskaraTheme.error),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (isTidakLayak) ...[
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: reasonController,
+                    onChanged: onReasonChanged,
+                    decoration: const InputDecoration(
+                      labelText: 'Catatan Temuan Tidak Layak *',
+                      hintText: 'Jelaskan temuan kondisi sanitasi pada area ini',
+                      isDense: true,
+                    ),
+                    minLines: 1,
+                    maxLines: 3,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ] else if (isTidakLayak && answer.alasan != null && answer.alasan!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: SiskaraTheme.error.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: SiskaraTheme.error.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, size: 16, color: SiskaraTheme.error),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Temuan Pegawai BBKK: ${answer.alasan}',
+                    style: const TextStyle(
+                      color: SiskaraTheme.error,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ],
     );
@@ -661,8 +1056,21 @@ class _AnswerDetail extends StatelessWidget {
 }
 
 class _EvidenceImage extends StatefulWidget {
-  const _EvidenceImage({required this.storagePath});
+  const _EvidenceImage({
+    required this.storagePath,
+    this.title = 'Foto Bukti',
+    this.subtitle,
+    this.latitude,
+    this.longitude,
+    this.timestamp,
+  });
+
   final String storagePath;
+  final String title;
+  final String? subtitle;
+  final double? latitude;
+  final double? longitude;
+  final DateTime? timestamp;
 
   @override
   State<_EvidenceImage> createState() => _EvidenceImageState();
@@ -711,21 +1119,69 @@ class _EvidenceImageState extends State<_EvidenceImage> {
             child: Center(child: CircularProgressIndicator()),
           );
         }
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            snapshot.data!,
-            height: 180,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _MediaError(
-              message: ErrorMessage.from(
-                error,
-                fallback: 'Bukti foto tidak dapat dimuat. Periksa koneksi.',
-              ),
-              onRetry: () => setState(() {
-                _imageUrl = _resolveUrl(widget.storagePath);
-              }),
+
+        final resolvedUrl = snapshot.data!;
+
+        return GestureDetector(
+          onTap: () {
+            InteractivePhotoViewer.show(
+              context,
+              imageUrl: resolvedUrl,
+              title: widget.title,
+              subtitle: widget.subtitle,
+              latitude: widget.latitude,
+              longitude: widget.longitude,
+              timestamp: widget.timestamp,
+            );
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Stack(
+              children: [
+                Image.network(
+                  resolvedUrl,
+                  height: 190,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => _MediaError(
+                    message: ErrorMessage.from(
+                      error,
+                      fallback: 'Bukti foto tidak dapat dimuat. Periksa koneksi.',
+                    ),
+                    onRetry: () => setState(() {
+                      _imageUrl = _resolveUrl(widget.storagePath);
+                    }),
+                  ),
+                ),
+                // Overlay hint badge for interactive tap, zoom, and download
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          'Tekan untuk Zoom & Unduh',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -741,31 +1197,39 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPending = status == 'menunggu_verifikasi_staf';
-    final isRejected = status == 'ditolak_otomatis' || status == 'ditolak_staf';
-    final background = isRejected
-        ? SiskaraTheme.error.withValues(alpha: 0.12)
-        : isPending
-            ? SiskaraTheme.warning.withValues(alpha: 0.15)
-            : SiskaraTheme.success.withValues(alpha: 0.12);
-    final foreground = isRejected
-        ? SiskaraTheme.error
-        : isPending
-            ? SiskaraTheme.warning
-            : SiskaraTheme.success;
+    Color bg;
+    Color fg;
+    String text;
+
+    switch (status) {
+      case 'final':
+        bg = SiskaraTheme.success.withValues(alpha: 0.12);
+        fg = SiskaraTheme.success;
+        text = customLabel ?? 'Disetujui';
+        break;
+      case 'ditolak_otomatis':
+      case 'ditolak_staf':
+        bg = SiskaraTheme.error.withValues(alpha: 0.12);
+        fg = SiskaraTheme.error;
+        text = customLabel ?? 'Ditolak';
+        break;
+      case 'menunggu_verifikasi_staf':
+      default:
+        bg = SiskaraTheme.warning.withValues(alpha: 0.14);
+        fg = SiskaraTheme.warning;
+        text = customLabel ?? 'Menunggu review';
+        break;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: background,
+        color: bg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        customLabel ?? SiskaraTheme.statusLabel(status),
-        style: TextStyle(
-          color: foreground,
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
-        ),
+        text,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
       ),
     );
   }
@@ -786,26 +1250,37 @@ class _NoticeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 19),
-          const SizedBox(width: 9),
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style:
-                        TextStyle(color: color, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text(message,
-                    style: const TextStyle(fontSize: 11, height: 1.4)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: SiskaraTheme.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -828,17 +1303,17 @@ class _ReviewError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined,
-                size: 48, color: SiskaraTheme.error),
+            const Icon(Icons.error_outline,
+                size: 44, color: SiskaraTheme.error),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
             if (onRetry != null) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Coba lagi'),
-              ),
+              const SizedBox(height: 14),
+              FilledButton(onPressed: onRetry, child: const Text('Coba lagi')),
             ],
           ],
         ),
@@ -849,24 +1324,31 @@ class _ReviewError extends StatelessWidget {
 
 class _MediaError extends StatelessWidget {
   const _MediaError({required this.message, required this.onRetry});
-
   final String message;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 120,
-      alignment: Alignment.center,
-      color: SiskaraTheme.backgroundLight,
+      height: 140,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: SiskaraTheme.backgroundLight,
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const Icon(Icons.broken_image_outlined,
+              size: 28, color: SiskaraTheme.textSecondary),
+          const SizedBox(height: 6),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11),
+            style: const TextStyle(
+                color: SiskaraTheme.textSecondary, fontSize: 11),
           ),
+          const SizedBox(height: 4),
           TextButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh, size: 15),
@@ -893,6 +1375,11 @@ String _displayValue(dynamic value) {
 
 String _answerLabel(String value) {
   const labels = {
+    'layak': 'Layak',
+    'tidak_layak': 'Tidak Layak',
+    'dilaporkan': 'Foto Dilaporkan',
+    'foto_diambil': 'Foto Dilaporkan',
+    'menunggu_penilaian': 'Menunggu Penilaian Staf',
     'memenuhi_syarat': 'Memenuhi syarat',
     'tidak_memenuhi_syarat': 'Tidak memenuhi',
     'tidak_tampak_tanda': 'Tidak tampak tanda',

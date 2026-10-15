@@ -13,6 +13,7 @@ import '../../../core/constants.dart';
 import '../../../core/error_message.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/app_bottom_nav.dart';
+import '../../../core/widgets/interactive_photo_viewer.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
 import '../../../models/user_model.dart';
@@ -266,7 +267,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     _draftId = draftId;
     _hasRestoredLocalDraft = true;
     _restoredDraftTime = DateFormat('dd/MM/yyyy HH:mm')
-        .format(submission.updatedAt ?? submission.createdAt);
+        .format(submission.updatedAt);
     _scheduleAutoSave();
     return _DraftFormData(template: template, items: items);
   }
@@ -420,6 +421,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       if (user != null) {
         await SubmissionDraftStorage.clear(user.id);
       }
+      if (!mounted) return;
       setState(() {
         _draftId = null;
         _hasRestoredLocalDraft = false;
@@ -520,47 +522,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
   List<_GeneralField> _fieldsFor(String role) =>
       role == AppConstants.roleKepalaKapal ? _shipFields : _aircraftFields;
-
-  String _labelValue(String value) => value
-      .split('_')
-      .map((part) =>
-          part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
-      .join(' ');
-
-  List<String> _optionsFor(ChecklistTemplateItemModel item) {
-    if (item.opsiJawaban.isNotEmpty) return item.opsiJawaban;
-    switch (item.tipeInput) {
-      case 'binary':
-        return const ['memenuhi_syarat', 'tidak_memenuhi_syarat'];
-      case 'three_level':
-        return const ['baik', 'cukup', 'kurang'];
-      default:
-        return const [];
-    }
-  }
-
-  String _optionLabel(String value) {
-    const labels = {
-      'memenuhi_syarat': 'Memenuhi syarat',
-      'tidak_memenuhi_syarat': 'Tidak memenuhi',
-      'tidak_tampak_tanda': 'Tidak tampak tanda',
-      'tampak_tanda': 'Tampak tanda',
-      'baik': 'Baik',
-      'cukup': 'Cukup',
-      'kurang': 'Kurang',
-    };
-    return labels[value] ?? _labelValue(value);
-  }
-
-  String _answerFor(ChecklistTemplateItemModel item) =>
-      _answers[item.id] ?? _controllers['answer_${item.id}']?.text.trim() ?? '';
-
-  Map<String, String> _currentAnswers(List<ChecklistTemplateItemModel> items) {
-    return {
-      for (final item in items)
-        if (_answerFor(item).isNotEmpty) item.id: _answerFor(item),
-    };
-  }
 
   Future<void> _captureEvidence(ChecklistTemplateItemModel item) async {
     try {
@@ -696,9 +657,8 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       );
 
       for (final item in items) {
-        final value = _answerFor(item);
         final reason = _controller('reason_${item.id}').text.trim();
-        stage = 'menyimpan jawaban untuk bagian ${item.label}';
+        stage = 'menyimpan dokumentasi untuk bagian ${item.label}';
         await firestore.saveAnswerForItem(
           submissionId: submissionId,
           itemId: item.id,
@@ -707,11 +667,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
             'template_item_id': item.id,
             'kategori': item.kategori,
             'label': item.label,
-            'nilai_jawaban': value,
+            'nilai_jawaban': 'dilaporkan',
             'alasan': reason.isEmpty ? null : reason,
-            'status_gagal': value.isNotEmpty &&
-                item.isFailValue(value) &&
-                item.autoRejectOnFail,
+            'status_gagal': false,
           },
         );
         final evidence = _evidence[item.id];
@@ -838,32 +796,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       }
     }
 
-    final currentAnswers = _currentAnswers(items);
     for (final item in items) {
       if (_evidence[item.id] == null && _savedEvidence[item.id] == null) {
-        _showError('Wajib mengambil foto bukti untuk: ${item.label}.');
-        return;
-      }
-      final value = currentAnswers[item.id] ?? '';
-      if (value.isEmpty) {
-        if (!item.isRequiredFor(currentAnswers)) continue;
-        _showError('Jawaban wajib diisi untuk: ${item.label}.');
-        return;
-      }
-      if (item.tipeInput == 'numeric') {
-        final parsed = _parseNumber(value);
-        if (parsed == null) {
-          _showError('Jawaban harus berupa angka untuk: ${item.label}.');
-          return;
-        }
-        if (parsed < 0) {
-          _showError('Jawaban tidak boleh negatif untuk: ${item.label}.');
-          return;
-        }
-      }
-      if (item.requiresReasonFor(value) &&
-          (_controllers['reason_${item.id}']?.text.trim().isEmpty ?? true)) {
-        _showError('Alasan wajib diisi untuk: ${item.label}.');
+        _showError('Wajib mengambil foto dokumentasi untuk: ${item.label}.');
         return;
       }
     }
@@ -906,9 +841,8 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       );
 
       for (final item in items) {
-        submissionStage = 'menyimpan jawaban untuk bagian ${item.label}';
-        final value = currentAnswers[item.id] ?? '';
-        final failed = value.isNotEmpty && item.isFailValue(value);
+        submissionStage = 'menyimpan dokumentasi area ${item.label}';
+        final note = _controller('reason_${item.id}').text.trim();
         await firestore.saveAnswerForItem(
           submissionId: submissionId,
           itemId: item.id,
@@ -917,11 +851,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
             'template_item_id': item.id,
             'kategori': item.kategori,
             'label': item.label,
-            'nilai_jawaban': value,
-            'alasan': value.isNotEmpty && item.requiresReasonFor(value)
-                ? _controller('reason_${item.id}').text.trim()
-                : null,
-            'status_gagal': failed && item.autoRejectOnFail,
+            'nilai_jawaban': 'dilaporkan',
+            'alasan': note.isNotEmpty ? note : null,
+            'status_gagal': false,
           },
         );
 
@@ -954,9 +886,8 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       ref.invalidate(userSubmissionsProvider);
 
       if (!mounted) return;
-      final label = status == AppConstants.statusDitolakOtomatis
-          ? 'Pengajuan ditolak otomatis karena ada temuan yang harus diperbaiki.'
-          : 'Deklarasi terkirim dan menunggu verifikasi petugas BBKK.';
+      const label =
+          'Dokumentasi sanitasi berhasil dikirim dan menunggu verifikasi penilaian oleh Petugas BBKK.';
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -970,7 +901,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 : SiskaraTheme.success,
           ),
           title: const Text('Deklarasi selesai'),
-          content: Text(label),
+          content: const Text(label),
           actions: [
             FilledButton(
               onPressed: () {
@@ -1411,15 +1342,10 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
   }
 
   Widget _buildChecklistItem(ChecklistTemplateItemModel item) {
-    final selected = _answers[item.id];
-    final answer = _answerFor(item);
-    final requiresReason = answer.isNotEmpty && item.requiresReasonFor(answer);
-    final options = _optionsFor(item);
     final evidence = _evidence[item.id];
     final position = _positions[item.id];
     final savedEvidence = _savedEvidence[item.id];
     final hasEvidence = evidence != null || savedEvidence != null;
-
     return _SurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1428,131 +1354,70 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.kategori,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: SiskaraTheme.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: hasEvidence
+                      ? SiskaraTheme.success.withValues(alpha: 0.12)
+                      : SiskaraTheme.warning.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Text(
-                  item.label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                  hasEvidence ? 'Foto Siap' : 'Wajib Foto',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        hasEvidence ? SiskaraTheme.success : SiskaraTheme.warning,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 7),
-          if (options.isNotEmpty)
-            FormField<String>(
-              initialValue: selected,
-              validator: (value) => value == null || value.isEmpty
-                  ? item.isRequiredFor(_answers)
-                      ? 'Pilih kondisi untuk bagian ini.'
-                      : null
-                  : null,
-              builder: (field) {
-                void selectOption(String option) {
-                  field.didChange(option);
-                  setState(() => _answers[item.id] = option);
-                  _scheduleAutoSave();
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (options.length == 2)
-                      Row(
-                        children: [
-                          for (var index = 0;
-                              index < options.length;
-                              index++) ...[
-                            if (index > 0) const SizedBox(width: 7),
-                            Expanded(
-                              child: _AnswerOptionButton(
-                                label: _optionLabel(options[index]),
-                                selected: field.value == options[index],
-                                onTap: _isSubmitting
-                                    ? null
-                                    : () => selectOption(options[index]),
-                              ),
-                            ),
-                          ],
-                        ],
-                      )
-                    else
-                      Wrap(
-                        spacing: 7,
-                        runSpacing: 6,
-                        children: [
-                          for (final option in options)
-                            ChoiceChip(
-                              label: Text(_optionLabel(option)),
-                              selected: field.value == option,
-                              onSelected: _isSubmitting
-                                  ? null
-                                  : (_) => selectOption(option),
-                            ),
-                        ],
-                      ),
-                    if (field.hasError)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5, left: 3),
-                        child: Text(
-                          field.errorText!,
-                          style: const TextStyle(
-                            color: SiskaraTheme.error,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            )
-          else
-            TextFormField(
-              controller: _controller('answer_${item.id}'),
-              keyboardType: item.tipeInput == 'numeric'
-                  ? const TextInputType.numberWithOptions(decimal: true)
-                  : TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'Jawaban',
-                hintText: 'Masukkan hasil pemeriksaan',
-              ),
-              onChanged: (value) {
-                setState(() => _answers[item.id] = value);
-                _scheduleAutoSave();
-              },
-              validator: (value) {
-                if ((value == null || value.trim().isEmpty) &&
-                    item.isRequiredFor(_answers)) {
-                  return 'Jawaban wajib diisi.';
-                }
-                if (item.tipeInput == 'numeric' &&
-                    value != null &&
-                    value.trim().isNotEmpty &&
-                    num.tryParse(value.trim()) == null) {
-                  return 'Masukkan angka yang valid.';
-                }
-                return null;
-              },
+          const SizedBox(height: 8),
+          const Text(
+            'Ambil foto kondisi sanitasi area ini. Penilaian kelayakan akan diisi oleh Petugas BBKK.',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: SiskaraTheme.textSecondary,
+              height: 1.3,
             ),
-          if (requiresReason) ...[
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _controller('reason_${item.id}'),
-              onChanged: (_) => _scheduleAutoSave(),
-              minLines: 2,
-              maxLines: 4,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Alasan / temuan',
-                hintText: 'Jelaskan kondisi yang ditemukan',
-                alignLabelWithHint: true,
-              ),
-              validator: (value) =>
-                  requiresReason && (value == null || value.trim().isEmpty)
-                      ? 'Alasan wajib diisi untuk temuan.'
-                      : null,
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: _controller('reason_${item.id}'),
+            onChanged: (_) => _scheduleAutoSave(),
+            minLines: 1,
+            maxLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              isDense: true,
+              labelText: 'Catatan kondisi pengisi (opsional)',
+              hintText: 'Keterangan tambahan jika diperlukan',
             ),
-          ],
+          ),
           const SizedBox(height: 11),
           Container(
             padding: const EdgeInsets.all(10),
@@ -1737,19 +1602,55 @@ class _StoredEvidencePreviewState extends State<_StoredEvidencePreview> {
             child: Center(child: CircularProgressIndicator()),
           );
         }
-        return Image.network(
-          snapshot.data!,
-          height: 126,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            height: 92,
-            color: SiskaraTheme.primaryDark.withValues(alpha: 0.08),
-            alignment: Alignment.center,
-            child: const Text(
-              'Foto tersimpan, pratinjau tidak tersedia.',
-              style: TextStyle(fontSize: 11),
-            ),
+        final resolved = snapshot.data!;
+        return GestureDetector(
+          onTap: () {
+            InteractivePhotoViewer.show(
+              context,
+              imageUrl: resolved,
+              title: 'Foto Bukti Tersimpan',
+            );
+          },
+          child: Stack(
+            children: [
+              Image.network(
+                resolved,
+                height: 126,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 92,
+                  color: SiskaraTheme.primaryDark.withValues(alpha: 0.08),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Foto tersimpan, pratinjau tidak tersedia.',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.zoom_in, color: Colors.white, size: 12),
+                      SizedBox(width: 3),
+                      Text(
+                        'Zoom & Unduh',
+                        style: TextStyle(color: Colors.white, fontSize: 9.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -1854,64 +1755,6 @@ class _GeneralFieldGroupCard extends StatelessWidget {
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AnswerOptionButton extends StatelessWidget {
-  const _AnswerOptionButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected
-          ? SiskaraTheme.primaryBlue.withValues(alpha: 0.1)
-          : Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 36),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? SiskaraTheme.primaryBlue : SiskaraTheme.divider,
-              width: selected ? 1.3 : 1,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected
-                        ? SiskaraTheme.primaryDark
-                        : SiskaraTheme.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

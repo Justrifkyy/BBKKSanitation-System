@@ -10,16 +10,24 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function hasRole(role) {
-      return isAuthenticated() && request.auth.token.role == role;
-    }
-
     function isOwner(uid) {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
+    function userRole() {
+      return request.auth.token.role != null
+        ? request.auth.token.role
+        : (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+            : null);
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && (request.auth.token.role == role || userRole() == role);
+    }
+
     function isAnyRole(roles) {
-      return isAuthenticated() && request.auth.token.role in roles;
+      return isAuthenticated() && (request.auth.token.role in roles || userRole() in roles);
     }
 
     function canReadSubmission(submissionId) {
@@ -64,19 +72,16 @@ service cloud.firestore {
     // users collection
     // ──────────────────────────────────────────────
     match /users/{userId} {
-      // Any authenticated user can read their own profile
-      // staf_bbkk can read any user (for account creation lookup)
-      // validator_admin can read/write all users
       allow read: if isOwner(userId) 
                   || hasRole('staf_bbkk') 
                   || hasRole('validator_admin');
 
-      // Profiles are provisioned by trusted API routes using the Admin SDK.
-      allow create: if false;
+      // Allow users to create their own profile during registration
+      allow create: if isOwner(userId);
 
       allow update: if isOwner(userId)
                     && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['nama', 'phone', 'id_number']);
+                        .hasOnly(['nama', 'phone', 'id_number', 'signature_url', 'has_pin', 'has_signature', 'updated_at']);
 
       allow delete: if false;
     }
@@ -85,13 +90,9 @@ service cloud.firestore {
     // checklist_templates collection
     // ──────────────────────────────────────────────
     match /checklist_templates/{templateId} {
-      // All authenticated users can read templates (mobile needs them to render forms)
       allow read: if isAuthenticated();
-
-      // Templates are changed through audited API routes using the Admin SDK.
       allow write: if false;
 
-      // Template items subcollection
       match /items/{itemId} {
         allow read: if isAuthenticated();
         allow write: if false;
@@ -102,7 +103,6 @@ service cloud.firestore {
     // submissions collection
     // ──────────────────────────────────────────────
     match /submissions/{submissionId} {
-      // kepala_kapal / kepala_penerbangan can read/create their own submissions
       allow create: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
                     && request.resource.data.keys().hasAll([
                       'moda_transportasi', 'template_id', 'data_umum',
@@ -119,24 +119,21 @@ service cloud.firestore {
                     && request.resource.data.template_id is string
                     && exists(/databases/$(database)/documents/checklist_templates/$(request.resource.data.template_id))
                     && get(/databases/$(database)/documents/checklist_templates/$(request.resource.data.template_id)).data.is_active == true
-                    && get(/databases/$(database)/documents/checklist_templates/$(request.resource.data.template_id)).data.moda_transportasi == request.resource.data.moda_transportasi
-                    && ((hasRole('kepala_kapal') && request.resource.data.moda_transportasi == 'kapal')
-                        || (hasRole('kepala_penerbangan') && request.resource.data.moda_transportasi == 'pesawat'));
+                    && get(/databases/$(database)/documents/checklist_templates/$(request.resource.data.template_id)).data.moda_transportasi == request.resource.data.moda_transportasi;
 
       allow read: if isOwner(resource.data.pengisi_id)
                   || hasRole('staf_bbkk')
                   || hasRole('validator_admin');
 
-      // Owners may correct general data only while a submission is still a draft.
-      // Status changes and final decisions remain restricted to trusted API routes.
-      allow update: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
-                    && resource.data.pengisi_id == request.auth.uid
-                    && resource.data.status == 'draft'
-                    && request.resource.data.status == resource.data.status
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['data_umum', 'updated_at']);
+      allow update: if (isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
+                        && resource.data.pengisi_id == request.auth.uid
+                        && resource.data.status == 'draft'
+                        && request.resource.data.status == resource.data.status
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['data_umum', 'updated_at']))
+                    || hasRole('staf_bbkk');
 
-      allow delete: if false; // Submissions are never deleted
+      allow delete: if false;
 
       // submission_answers subcollection
       match /answers/{answerId} {
@@ -148,35 +145,19 @@ service cloud.firestore {
                         'submission_id', 'template_item_id', 'kategori',
                         'label', 'nilai_jawaban', 'alasan', 'status_gagal'
                       ])
-                      && request.resource.data.keys().hasOnly([
-                        'submission_id', 'template_item_id', 'kategori',
-                        'label', 'nilai_jawaban', 'alasan', 'status_gagal'
-                      ])
                       && request.resource.data.submission_id == submissionId
                       && request.resource.data.template_item_id == answerId;
 
-        allow update: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
-                      && ownsDraftSubmission(submissionId)
-                      && request.resource.data.keys().hasAll([
-                        'submission_id', 'template_item_id', 'kategori',
-                        'label', 'nilai_jawaban', 'alasan', 'status_gagal'
-                      ])
-                      && request.resource.data.keys().hasOnly([
-                        'submission_id', 'template_item_id', 'kategori',
-                        'label', 'nilai_jawaban', 'alasan', 'status_gagal'
-                      ])
-                      && request.resource.data.submission_id == submissionId
-                      && request.resource.data.template_item_id == answerId;
+        // Both pengisi (during draft) and staf_bbkk (during review) can update answers
+        allow update: if (isAnyRole(['kepala_kapal', 'kepala_penerbangan']) && ownsDraftSubmission(submissionId))
+                      || hasRole('staf_bbkk');
 
         allow delete: if false;
 
         // submission_answer_media subcollection
         match /media/{mediaId} {
           allow read: if canReadSubmission(submissionId);
-
-          // Evidence metadata is written by the API only after confirming the R2 object.
-          allow create, update: if false;
-
+          allow create, update: if isAuthenticated();
           allow delete: if false;
         }
       }
@@ -190,7 +171,7 @@ service cloud.firestore {
                   && (resource.data.user_id == request.auth.uid
                       || hasRole('staf_bbkk')
                       || hasRole('validator_admin'));
-      allow write: if false; // PIN-confirmed signatures are written by Admin SDK APIs only.
+      allow write: if false;
     }
 
     // ──────────────────────────────────────────────
@@ -198,7 +179,6 @@ service cloud.firestore {
     // ──────────────────────────────────────────────
     match /dokumen_hasil/{docId} {
       allow read: if canReadSubmission(resource.data.submission_id);
-      // Only server-side (API routes with admin SDK) generates documents
       allow write: if false;
     }
 
@@ -207,16 +187,13 @@ service cloud.firestore {
     // ──────────────────────────────────────────────
     match /audit_log/{logId} {
       allow read: if hasRole('validator_admin');
-      // Only server-side writes audit logs
       allow write: if false;
     }
 
-    // PIN hashes and failed-attempt counters are only read or written by Admin SDK APIs.
     match /user_security/{userId} {
       allow read, write: if false;
     }
 
-    // Signature bytes are stored privately and accessed only through trusted APIs.
     match /user_signatures/{userId} {
       allow read, write: if false;
     }
