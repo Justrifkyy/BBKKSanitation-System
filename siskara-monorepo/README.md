@@ -1,10 +1,10 @@
-# SISKARA – Sistem Skrining dan Pemeriksaan Kesehatan Kapal dan Pesawat Udara
+# ARJUNA – Aplikasi Skrining dan Pemeriksaan Sanitasi Transportasi
 
 > **Client**: Balai Besar Kekarantinaan Kesehatan (BBKK) Makassar – Kementerian Kesehatan RI
 
 ## Overview
 
-SISKARA digitizes BBKK's health quarantine inspection process for ships and aircraft. Ship/aircraft crew self-declare their sanitation condition through a mobile form, and BBKK staff review the declaration and give a final approve/reject decision. On approval, an official document (PHQC for ships, Berkas Verifikasi for aircraft) is generated automatically.
+ARJUNA mendigitalisasi proses pemeriksaan karantina dan higiene sanitasi BBKK untuk kapal dan pesawat udara. Awak kapal/pesawat melakukan deklarasi mandiri (self-declaration) melalui form mobile, dan staf BBKK memeriksa deklarasi tersebut serta memberikan keputusan final approve/reject. Setelah disetujui, dokumen resmi (PHQC untuk kapal, Berkas Verifikasi untuk pesawat) diterbitkan secara otomatis.
 
 ## Monorepo Structure
 

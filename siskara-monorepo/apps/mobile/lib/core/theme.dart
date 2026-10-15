@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// ARJUNA design system — colors, typography, and theme data.
+typedef ArjunaTheme = SiskaraTheme;
+
 class SiskaraTheme {
   SiskaraTheme._();
 

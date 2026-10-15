@@ -15,12 +15,13 @@ export async function middleware(request: NextRequest) {
     return NR.next();
   }
 
-  // Skip public routes
+  // Skip public routes and static assets (images, icons, etc.)
   if (
     pathname === '/login' ||
     pathname === '/' ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon')
+    pathname.startsWith('/favicon') ||
+    /\.(?:png|jpg|jpeg|gif|webp|svg|ico|json)$/i.test(pathname)
   ) {
     return NR.next();
   }
@@ -37,5 +38,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico)$).*)'],
 };

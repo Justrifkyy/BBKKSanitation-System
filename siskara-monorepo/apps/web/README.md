@@ -1,6 +1,6 @@
-# SISKARA Web Admin
+# ARJUNA Web Admin
 
-Portal internal SISKARA untuk administrator BBKK Makassar. Aplikasi web
+Portal internal ARJUNA untuk administrator BBKK Makassar. Aplikasi web
 dimulai langsung dari halaman login; tidak ada landing page publik. Halaman
 utama yang tersedia saat ini:
 

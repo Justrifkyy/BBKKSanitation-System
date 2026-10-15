@@ -13,9 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SISKARA | BBKK Makassar",
+  title: "ARJUNA | BBKK Makassar",
   description:
-    "Sistem Informasi Sanitasi dan Karantina untuk BBKK Makassar.",
+    "ARJUNA - Aplikasi Skrining dan Pemeriksaan Sanitasi Transportasi, Balai Besar Kekarantinaan Kesehatan Makassar.",
+  icons: {
+    icon: "/LOGOSISTEM.png",
+    apple: "/LOGOSISTEM.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

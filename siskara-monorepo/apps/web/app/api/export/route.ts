@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     ];
   });
   const headers = ['ID Pengajuan', 'Moda', 'Nama kapal / No. penerbangan', 'Asal', 'Tanggal dibuat', 'Status'];
-  const filename = `siskara-pengajuan-${new Date().toISOString().slice(0, 10)}`;
+  const filename = `arjuna-pengajuan-${new Date().toISOString().slice(0, 10)}`;
 
   if (format === 'csv') {
     const content = `\uFEFF${[headers, ...rows].map((row) => row.map(csvValue).join(',')).join('\r\n')}`;
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     const widths = [150, 55, 190, 125, 130, 90];
     const rowHeight = 24;
     const drawHeader = (y: number) => {
-      page.drawText('Laporan Pengajuan SISKARA', { x: margin, y: 555, size: 16, font: bold, color: rgb(0.08, 0.29, 0.31) });
+      page.drawText('Laporan Pengajuan ARJUNA', { x: margin, y: 555, size: 16, font: bold, color: rgb(0.08, 0.29, 0.31) });
       page.drawText(`Data: ${rows.length} pengajuan (maksimal 5.000 baris)`, { x: margin, y: 536, size: 9, font });
       let x = margin;
       headers.forEach((header, index) => {

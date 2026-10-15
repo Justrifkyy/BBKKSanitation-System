@@ -1,7 +1,8 @@
 {
   "$schema_note": "Full ground-up specification for the SISKARA application, written for a project that is about to be built from scratch. This file is meant to be read by AI coding assistants (e.g. in VS Code / Claude Code) as the single source of truth before writing any code. Keep it updated whenever a design decision changes.",
-  "app_name": "SISKARA",
-  "full_name": "Sistem Skrining dan Pemeriksaan Kesehatan Kapal dan Pesawat Udara",
+  "app_name": "ARJUNA",
+  "full_name": "Aplikasi Skrining dan Pemeriksaan Sanitasi Transportasi",
+  "alias": "SISKARA",
   "client": "Balai Besar Kekarantinaan Kesehatan (BBKK) Makassar - Kementerian Kesehatan RI",
   "spec_version": "1.0.0",
   "last_updated": "2026-10-05",

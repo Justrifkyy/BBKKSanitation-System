@@ -1,4 +1,4 @@
-/** Type definitions for the SISKARA web application */
+/** Type definitions for the ARJUNA web application */
 
 export type UserRole = 'kepala_kapal' | 'kepala_penerbangan' | 'staf_bbkk' | 'validator_admin';
 export type TransportMode = 'kapal' | 'pesawat';

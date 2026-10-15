@@ -34,7 +34,7 @@ function ExportsContent() {
       }
       const blob = await response.blob();
       const disposition = response.headers.get('Content-Disposition') ?? '';
-      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `siskara-pengajuan.${format}`;
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `arjuna-pengajuan.${format}`;
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

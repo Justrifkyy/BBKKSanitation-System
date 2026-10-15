@@ -109,387 +109,644 @@ select:focus-visible {
   line-height: 1.4;
 }
 
-/* Login */
-.login-page {
-  display: grid;
-  min-height: 100vh;
-  grid-template-columns: minmax(380px, 0.92fr) minmax(480px, 1.08fr);
-  background: #fff;
-}
+/* ==========================================================================
+   ARJUNA LOGIN PORTAL (Ultra-Modern Glassmorphic & Transparent Logos)
+   ========================================================================== */
 
-.login-story {
+.arjuna-login {
   position: relative;
-  display: flex;
-  overflow: hidden;
   min-height: 100vh;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 48px clamp(38px, 6vw, 88px) 30px;
-  background:
-    radial-gradient(ellipse at 85% 68%, rgba(28, 146, 132, 0.32), transparent 38%),
-    linear-gradient(148deg, #102e36 0%, #0f4145 62%, #12645e 100%);
-  color: #f3fffd;
-}
-
-.login-story__content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  min-height: min(84vh, 780px);
-  flex-direction: column;
-}
-
-.login-brand {
+  height: 100vh;
+  max-height: 100vh;
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 14px;
-}
-
-.login-brand strong,
-.login-brand small {
-  display: block;
-}
-
-.login-brand strong {
-  font-size: 17px;
-  font-weight: 760;
-  letter-spacing: 0.1em;
-}
-
-.login-brand small {
-  margin-top: 3px;
-  color: rgba(229, 248, 244, 0.67);
-  font-size: 11px;
-}
-
-.login-story__message {
-  max-width: 490px;
-  margin-top: clamp(92px, 15vh, 164px);
-}
-
-.eyebrow--light {
-  color: #91d5ca;
-}
-
-.login-story__message h1 {
-  margin: 20px 0 17px;
-  font-size: clamp(40px, 4.2vw, 58px);
-  font-weight: 640;
-  letter-spacing: -0.055em;
-  line-height: 1.1;
-}
-
-.login-story__message h1 span {
-  color: #79d5c7;
-}
-
-.login-story__message p {
-  max-width: 405px;
-  margin: 0;
-  color: rgba(236, 249, 247, 0.72);
-  font-size: 14px;
-  line-height: 1.8;
-}
-
-.login-assurance {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  max-width: 430px;
-  margin-top: auto;
-  padding: 17px 18px;
-  border: 1px solid rgba(216, 247, 242, 0.14);
-  border-radius: 13px;
-  background: rgba(9, 35, 40, 0.23);
-  backdrop-filter: blur(10px);
-}
-
-.login-assurance__icon {
-  display: grid;
-  width: 37px;
-  height: 37px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 11px;
-  background: rgba(136, 219, 204, 0.15);
-  color: #a4eadb;
-}
-
-.login-assurance__icon svg {
-  width: 20px;
-  height: 20px;
-}
-
-.login-assurance strong,
-.login-assurance small {
-  display: block;
-}
-
-.login-assurance strong {
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.login-assurance small {
-  margin-top: 5px;
-  color: rgba(236, 249, 247, 0.62);
-  font-size: 11px;
-}
-
-.login-story__glow {
-  position: absolute;
-  width: 320px;
-  height: 320px;
-  border: 1px solid rgba(191, 237, 227, 0.08);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.login-story__glow::before,
-.login-story__glow::after {
-  position: absolute;
-  inset: 30px;
-  border: 1px solid rgba(191, 237, 227, 0.06);
-  border-radius: inherit;
-  content: "";
-}
-
-.login-story__glow::after {
-  inset: 72px;
-}
-
-.login-story__glow--top {
-  top: -168px;
-  right: -142px;
-}
-
-.login-story__glow--bottom {
-  right: -210px;
-  bottom: 53px;
-  width: 430px;
-  height: 430px;
-}
-
-.login-story__watermark {
-  position: absolute;
-  right: -6px;
-  bottom: 14%;
-  color: rgba(231, 255, 249, 0.035);
-  font-size: 400px;
-  font-weight: 750;
-  line-height: 0.8;
-  pointer-events: none;
-}
-
-.login-story__footer {
-  position: relative;
-  z-index: 1;
-  margin: 29px 0 0;
-  color: rgba(232, 248, 245, 0.48);
-  font-size: 10px;
-}
-
-.login-panel {
-  position: relative;
-  display: flex;
-  min-height: 100vh;
-  flex-direction: column;
   justify-content: center;
-  padding: 50px clamp(48px, 8vw, 135px);
-  background: #fff;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 60% at 18% 25%, rgba(18, 115, 105, 0.42) 0%, transparent 60%),
+    radial-gradient(ellipse 65% 55% at 82% 75%, rgba(13, 85, 95, 0.35) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(9, 45, 52, 0.5) 0%, transparent 100%),
+    linear-gradient(145deg, #051317 0%, #082128 45%, #06191f 100%);
+  color: #e4f7f4;
+  padding: clamp(8px, 1.8vh, 18px) 24px;
 }
 
-.login-panel__top {
+/* Subtle Animated Ambient Orbs */
+.arjuna-ambient {
   position: absolute;
-  top: 38px;
-  right: clamp(48px, 6vw, 94px);
-  color: #7c8b90;
-  font-size: 11px;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.65;
+  z-index: 0;
 }
 
-.login-form-wrap {
-  width: min(100%, 406px);
+.arjuna-ambient--1 {
+  top: -120px;
+  left: -80px;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(29, 209, 161, 0.22) 0%, transparent 70%);
+}
+
+.arjuna-ambient--2 {
+  bottom: -150px;
+  right: -100px;
+  width: 560px;
+  height: 560px;
+  background: radial-gradient(circle, rgba(18, 140, 130, 0.24) 0%, transparent 70%);
+}
+
+.arjuna-ambient--3 {
+  top: 40%;
+  left: 45%;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(214, 155, 53, 0.08) 0%, transparent 70%);
+}
+
+/* Geometric Grid Pattern Overlay */
+.arjuna-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(45, 212, 191, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 212, 191, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 40%, transparent 95%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Main Container - Exact Scale from Screenshot */
+.arjuna-login__container {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(360px, 1.15fr) minmax(330px, 0.85fr);
+  gap: clamp(16px, 2.5vw, 36px);
+  max-width: 1040px;
+  width: 100%;
+  align-items: center;
   margin: 0 auto;
 }
 
-.login-heading {
-  margin-bottom: 32px;
-}
-
-.login-heading .eyebrow {
-  color: var(--teal);
-}
-
-.login-heading h2 {
-  margin: 12px 0 8px;
-  color: #20353c;
-  font-size: 28px;
-  font-weight: 680;
-  letter-spacing: -0.04em;
-}
-
-.login-heading p {
-  margin: 0;
-  color: #78868c;
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.login-form {
-  display: grid;
-  gap: 21px;
-}
-
-.form-field {
-  display: grid;
-  gap: 9px;
-  color: #34484f;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.input-wrap {
+/* ─── Hero Section (Left) ─── */
+.arjuna-hero {
   display: flex;
-  height: 48px;
+  flex-direction: column;
+  gap: clamp(8px, 1.3vh, 13px);
+  padding: 2px 0;
+}
+
+.arjuna-hero__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.arjuna-hero__logos {
+  display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 0 13px;
-  border: 1px solid #dfe6e8;
-  border-radius: 8px;
-  background: #fff;
-  color: #89989d;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  gap: 12px;
 }
 
-.input-wrap:focus-within {
-  border-color: #56a8a0;
-  box-shadow: 0 0 0 3px rgba(19, 124, 120, 0.09);
+/* Transparent Logos with Glow */
+.arjuna-logo-bbkk,
+.arjuna-logo-system {
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 10px rgba(45, 212, 191, 0.28));
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.input-wrap > svg {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 auto;
+.arjuna-logo-bbkk:hover,
+.arjuna-logo-system:hover {
+  transform: translateY(-2px) scale(1.05);
 }
 
-.input-wrap input {
+.arjuna-hero__logos-divider {
+  width: 2px;
+  height: 32px;
+  background: linear-gradient(to bottom, transparent, rgba(45, 212, 191, 0.55), transparent);
+}
+
+.arjuna-hero__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.arjuna-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 2px 8px;
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  border-radius: 999px;
+  color: #7ee7d7;
+  font-size: 8.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.arjuna-badge__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2dd4bf;
+  box-shadow: 0 0 6px #2dd4bf;
+}
+
+.arjuna-title {
+  margin: 1px 0 0;
+  font-size: clamp(22px, 2.2vw, 28px);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  line-height: 1.05;
+  background: linear-gradient(135deg, #ffffff 30%, #7ee7d7 85%, #2dd4bf 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.arjuna-subtitle {
+  margin: 0;
+  color: rgba(220, 245, 241, 0.72);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.arjuna-hero__main {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1vh, 9px);
+}
+
+.arjuna-tagline {
+  margin: 0;
+  font-size: clamp(16px, 1.5vw, 19px);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.arjuna-tagline__highlight {
+  background: linear-gradient(135deg, #2dd4bf 0%, #a7f3d0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.arjuna-description {
+  margin: 0;
+  max-width: 460px;
+  color: rgba(212, 241, 237, 0.74);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.arjuna-features {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 1px;
+}
+
+.arjuna-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 11px;
+  border-radius: 9px;
+  background: rgba(10, 36, 44, 0.45);
+  border: 1px solid rgba(130, 219, 206, 0.12);
+  backdrop-filter: blur(14px);
+  transition: all 0.25s ease;
+}
+
+.arjuna-feature-item:hover {
+  background: rgba(14, 48, 58, 0.65);
+  border-color: rgba(45, 212, 191, 0.3);
+  transform: translateX(3px);
+}
+
+.arjuna-feature-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(45, 212, 191, 0.12);
+  color: #2dd4bf;
+  flex-shrink: 0;
+}
+
+.arjuna-feature-item__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.arjuna-feature-item__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.arjuna-feature-item__content strong {
+  font-size: 11px;
+  font-weight: 680;
+  color: #f1faf8;
+}
+
+.arjuna-feature-item__content span {
+  font-size: 9.5px;
+  color: rgba(212, 239, 235, 0.62);
+  line-height: 1.3;
+}
+
+.arjuna-hero__footer {
+  margin-top: 1px;
+}
+
+.arjuna-server-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2.5px 9px;
+  border-radius: 999px;
+  background: rgba(8, 28, 34, 0.6);
+  border: 1px solid rgba(45, 212, 191, 0.16);
+  color: rgba(220, 245, 241, 0.68);
+  font-size: 9px;
+  font-weight: 550;
+}
+
+.arjuna-status-beacon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-beacon 2s infinite;
+}
+
+@keyframes pulse-beacon {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* ─── Form Section (Right Glass Card) ─── */
+.arjuna-form-section {
+  display: flex;
+  justify-content: center;
   width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: #243941;
-  font-size: 13px;
 }
 
-.input-wrap input::placeholder {
-  color: #a5b0b4;
-  font-weight: 400;
+.arjuna-card {
+  width: 100%;
+  max-width: 360px;
+  padding: clamp(14px, 2vh, 18px) 20px;
+  background: rgba(11, 34, 42, 0.72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(130, 219, 206, 0.22);
+  border-radius: 18px;
+  box-shadow:
+    0 25px 55px -15px rgba(0, 0, 0, 0.75),
+    0 0 35px rgba(20, 150, 135, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.2vh, 11px);
 }
 
-.password-toggle {
-  flex: 0 0 auto;
-  padding: 5px 0 5px 5px;
-  border: 0;
-  background: transparent;
-  color: var(--teal);
-  cursor: pointer;
-  font-size: 10px;
+.arjuna-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.arjuna-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  color: #2dd4bf;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  margin-bottom: 1px;
+}
+
+.arjuna-card__badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.arjuna-card__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+}
+
+.arjuna-card__subtitle {
+  margin: 0;
+  color: rgba(212, 239, 235, 0.65);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+/* Form inputs */
+.arjuna-form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.arjuna-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.arjuna-field label {
+  color: #c9ede7;
+  font-size: 10.5px;
   font-weight: 650;
+  letter-spacing: 0.02em;
 }
 
-.form-error {
+.arjuna-field__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.arjuna-input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 10px;
+  background: rgba(6, 20, 26, 0.68);
+  border: 1px solid rgba(130, 219, 206, 0.2);
+  border-radius: 9px;
+  transition: all 0.2s ease;
+}
+
+.arjuna-input-box:focus-within {
+  border-color: #2dd4bf;
+  background: rgba(7, 24, 31, 0.88);
+  box-shadow: 0 0 0 2.5px rgba(45, 212, 191, 0.18), 0 0 14px rgba(45, 212, 191, 0.15);
+}
+
+.arjuna-input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5dafa2;
+  margin-right: 9px;
+  flex-shrink: 0;
+}
+
+.arjuna-input-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.arjuna-input-box input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: #f2fbf9;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.arjuna-input-box input::placeholder {
+  color: rgba(180, 215, 210, 0.4);
+}
+
+.arjuna-toggle-pwd {
+  border: none;
+  background: transparent;
+  color: #7ee7d7;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.arjuna-toggle-pwd:hover {
+  color: #2dd4bf;
+}
+
+.arjuna-toggle-pwd svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Error Alert */
+.arjuna-error-box {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: -4px 0 0;
-  padding: 11px 12px;
-  border: 1px solid #f2ceca;
-  border-radius: 7px;
-  background: #fff6f5;
-  color: #ad3f36;
-  font-size: 11px;
-  line-height: 1.55;
-}
-
-.form-error svg {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-}
-
-.login-submit {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 2px;
-  border: 1px solid var(--teal);
+  padding: 8px 10px;
   border-radius: 8px;
-  background: var(--teal);
-  box-shadow: 0 4px 10px rgba(19, 124, 120, 0.15);
-  color: #fff;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 650;
-  transition: background 150ms ease, transform 150ms ease;
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fca5a5;
+  font-size: 10.5px;
+  line-height: 1.4;
+  animation: shake 0.3s ease;
 }
 
-.login-submit:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: var(--teal-dark);
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
 }
 
-.login-submit:disabled {
-  cursor: wait;
-  opacity: 0.8;
-}
-
-.login-submit svg {
-  width: 17px;
-  height: 17px;
-}
-
-.button-spinner {
+.arjuna-error-box svg {
   width: 15px;
   height: 15px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #fff;
+  flex-shrink: 0;
+  color: #ef4444;
+  margin-top: 1px;
+}
+
+/* Submit Button */
+.arjuna-btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  width: 100%;
+  margin-top: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9px;
+  background: linear-gradient(135deg, #0e786e 0%, #139c8d 50%, #1dcba7 100%);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -4px rgba(19, 156, 141, 0.45);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.arjuna-btn-submit:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  box-shadow: 0 12px 24px -4px rgba(29, 203, 167, 0.55);
+  filter: brightness(1.08);
+}
+
+.arjuna-btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.arjuna-btn-submit:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.arjuna-btn-submit svg {
+  width: 15px;
+  height: 15px;
+  transition: transform 0.2s ease;
+}
+
+.arjuna-btn-submit:hover:not(:disabled) svg {
+  transform: translateX(2px);
+}
+
+.arjuna-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* Notice for Mobile Users */
+.arjuna-role-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: rgba(14, 45, 54, 0.5);
+  border: 1px solid rgba(130, 219, 206, 0.12);
+  color: rgba(212, 239, 235, 0.7);
+  font-size: 9.5px;
+  line-height: 1.4;
 }
 
-.login-help {
-  margin: 28px 0 0;
-  color: #89969a;
-  font-size: 11px;
-  text-align: center;
+.arjuna-role-notice svg {
+  width: 15px;
+  height: 15px;
+  color: #2dd4bf;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
-.login-help a {
-  color: var(--teal);
-  font-weight: 650;
-  text-decoration: none;
+.arjuna-role-notice strong {
+  display: block;
+  color: #e6f6f4;
+  margin-bottom: 1px;
 }
 
-.login-help a:hover {
-  text-decoration: underline;
-}
-
-.login-panel__footer {
-  position: absolute;
-  right: 25px;
-  bottom: 18px;
-  left: 25px;
+.arjuna-role-notice p {
   margin: 0;
-  color: #a3afb2;
-  font-size: 10px;
+}
+
+/* Card footer */
+.arjuna-card__footer {
   text-align: center;
+  border-top: 1px solid rgba(130, 219, 206, 0.1);
+  padding-top: 6px;
+  margin-top: -2px;
+}
+
+.arjuna-card__footer p {
+  margin: 0;
+  font-size: 9px;
+  color: rgba(190, 225, 220, 0.5);
+}
+
+/* ─── Responsive Breakdown ─── */
+@media (max-width: 900px), (max-height: 520px) {
+  .arjuna-login {
+    height: auto;
+    max-height: none;
+    min-height: 100vh;
+    overflow-y: auto;
+    padding: 20px 14px;
+  }
+
+  .arjuna-login__container {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+    gap: 20px;
+  }
+
+  .arjuna-hero {
+    text-align: center;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .arjuna-hero__logos {
+    justify-content: center;
+  }
+
+  .arjuna-hero__titles {
+    align-items: center;
+  }
+
+  .arjuna-description {
+    max-width: 100%;
+  }
+
+  .arjuna-features {
+    display: grid;
+    grid-template-columns: 1fr;
+    text-align: left;
+    width: 100%;
+  }
+
+  .arjuna-card {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .arjuna-card {
+    padding: 18px 16px;
+  }
+
+  .arjuna-title {
+    font-size: 24px;
+  }
+
+  .arjuna-tagline {
+    font-size: 17px;
+  }
 }
 
 /* Admin dashboard */

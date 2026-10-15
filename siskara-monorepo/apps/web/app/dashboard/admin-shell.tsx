@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { auth } from '@/lib/firebase';
 
 type AdminContextValue = { user: User; name: string };
@@ -132,9 +133,18 @@ export function AdminShell({
   return (
     <main className="dashboard-shell">
       <aside className="dashboard-sidebar">
-        <a className="sidebar-brand" href="/dashboard" aria-label="SISKARA Dashboard">
-          <span className="brand-mark brand-mark--sidebar" aria-hidden="true">S</span>
-          <span><strong>SISKARA</strong><small>BBKK Makassar</small></span>
+        <a className="sidebar-brand" href="/dashboard" aria-label="ARJUNA Dashboard">
+          <div className="sidebar-brand__logos">
+            <Image
+              src="/LOGOSISTEM.png"
+              alt="Logo ARJUNA"
+              width={32}
+              height={32}
+              priority
+              className="sidebar-logo-arjuna"
+            />
+          </div>
+          <span><strong>ARJUNA</strong><small>BBKK Makassar</small></span>
         </a>
         <div className="sidebar-menu">
           {linkGroups.map((group) => (
