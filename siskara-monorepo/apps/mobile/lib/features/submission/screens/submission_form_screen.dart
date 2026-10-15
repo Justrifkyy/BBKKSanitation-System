@@ -15,12 +15,15 @@ import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
 import '../../../models/user_model.dart';
+import '../../../services/firestore_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
 
 class SubmissionFormScreen extends ConsumerStatefulWidget {
-  const SubmissionFormScreen({super.key});
+  const SubmissionFormScreen({super.key, this.draftId});
+
+  final String? draftId;
 
   @override
   ConsumerState<SubmissionFormScreen> createState() =>
@@ -35,42 +38,62 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
   final Map<String, XFile> _evidence = {};
   final Map<String, Position> _positions = {};
   final Map<String, DateTime> _captureTimes = {};
+  final Map<String, SubmissionAnswerMediaModel> _savedEvidence = {};
   String? _draftId;
+  Future<_DraftFormData>? _draftFuture;
   bool _isSubmitting = false;
+  bool _confirmsAccuracy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _draftId = widget.draftId;
+    if (widget.draftId != null) {
+      _draftFuture = _loadDraft(widget.draftId!);
+    }
+  }
 
   static const _shipFields = <_GeneralField>[
     _GeneralField('nama_kapal', 'Nama kapal'),
     _GeneralField('jenis_kapal', 'Jenis kapal'),
     _GeneralField('besar_kapal_grt', 'Besar kapal (GRT)', numeric: true),
     _GeneralField('bendera', 'Bendera'),
-    _GeneralField('nomor_imo', 'Nomor IMO'),
-    _GeneralField('pelabuhan_asal', 'Pelabuhan asal'),
-    _GeneralField('nama_pemilik_agen', 'Nama pemilik / agen'),
+    _GeneralField('nomor_imo', 'Nomor IMO', fullWidth: true),
+    _GeneralField('pelabuhan_asal', 'Pelabuhan asal', fullWidth: true),
+    _GeneralField(
+      'nama_pemilik_agen',
+      'Nama pemilik / agen',
+      fullWidth: false,
+    ),
     _GeneralField(
       'tujuan_pelabuhan_berikutnya',
       'Tujuan pelabuhan berikutnya',
       required: false,
+      fullWidth: false,
     ),
     _GeneralField(
       'tanggal_jam_tiba',
       'Tanggal dan jam tiba',
-      hint: 'Contoh: 13-10-2026 08:30',
+      hint: 'Kedatangan',
       dateTime: true,
+      fullWidth: false,
     ),
     _GeneralField(
       'tanggal_jam_berangkat',
       'Tanggal dan jam berangkat',
       required: false,
-      hint: 'Contoh: 13-10-2026 10:30',
+      hint: 'Keberangkatan',
       dateTime: true,
+      fullWidth: false,
     ),
     _GeneralField(
       'diperiksa_tanggal_jam',
       'Tanggal dan jam diperiksa',
-      hint: 'Contoh: 13-10-2026 09:00',
+      hint: 'Waktu diperiksa',
       dateTime: true,
+      fullWidth: false,
     ),
-    _GeneralField('lokasi_sandar', 'Lokasi sandar'),
+    _GeneralField('lokasi_sandar', 'Lokasi sandar', fullWidth: false),
     _GeneralField(
       'jumlah_awak_kapal',
       'Jumlah awak kapal',
@@ -105,6 +128,64 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
   TextEditingController _controller(String key) =>
       _controllers.putIfAbsent(key, TextEditingController.new);
+
+  Future<_DraftFormData> _loadDraft(String draftId) async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) throw StateError('Sesi pengguna berakhir.');
+
+    final firestore = ref.read(firestoreServiceProvider);
+    final submission = await firestore.getSubmission(draftId);
+    if (submission == null ||
+        submission.pengisiId != user.id ||
+        !submission.isDraft) {
+      throw StateError('Draft tidak ditemukan atau tidak dapat dilanjutkan.');
+    }
+    final expectedMode = user.role == AppConstants.roleKepalaKapal
+        ? AppConstants.modaKapal
+        : AppConstants.modaPesawat;
+    if (submission.modaTransportasi != expectedMode) {
+      throw StateError('Draft ini tidak sesuai dengan jenis akun Anda.');
+    }
+
+    final template = await firestore.getTemplate(submission.templateId);
+    if (template == null) {
+      throw StateError('Template untuk draft ini tidak lagi tersedia.');
+    }
+    final items = await firestore.getTemplateItems(template.id);
+    final answers = await firestore.getSubmissionAnswers(draftId);
+    final mediaEntries = await Future.wait(
+      items.map((item) async {
+        final media = await firestore.getAnswerMedia(draftId, item.id);
+        media.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        return MapEntry(
+          item.id,
+          media.isEmpty ? null : media.first,
+        );
+      }),
+    );
+
+    for (final field in _fieldsFor(user.role)) {
+      final value = submission.dataUmum[field.name];
+      if (value != null) _controller(field.name).text = value.toString();
+    }
+    for (final answer in answers) {
+      if (answer.nilaiJawaban.isNotEmpty) {
+        _answers[answer.templateItemId] = answer.nilaiJawaban;
+        _controller('answer_${answer.templateItemId}').text =
+            answer.nilaiJawaban;
+      }
+      final reason = answer.alasan;
+      if (reason != null && reason.isNotEmpty) {
+        _controller('reason_${answer.templateItemId}').text = reason;
+      }
+    }
+    _savedEvidence.addEntries(
+      mediaEntries.where((entry) => entry.value != null).map(
+            (entry) => MapEntry(entry.key, entry.value!),
+          ),
+    );
+    return _DraftFormData(template: template, items: items);
+  }
 
   @override
   void dispose() {
@@ -255,6 +336,141 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     return pin;
   }
 
+  Future<void> _saveDraft({
+    required ChecklistTemplateModel template,
+    required List<ChecklistTemplateItemModel> items,
+  }) async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) {
+      _showError('Sesi pengguna berakhir. Silakan masuk kembali.');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    var stage = 'menyimpan draft';
+    try {
+      final firestore = ref.read(firestoreServiceProvider);
+      final storage = StorageService();
+      final submissionId = _draftId ?? firestore.newSubmissionId();
+      _draftId = submissionId;
+      final now = DateTime.now();
+      final submission = SubmissionModel(
+        id: submissionId,
+        modaTransportasi: template.modaTransportasi,
+        templateId: template.id,
+        dataUmum: _collectGeneralData(user.role),
+        pengisiId: user.id,
+        status: AppConstants.statusDraft,
+        createdAt: now,
+        updatedAt: now,
+      );
+      await firestore.createSubmissionWithId(submissionId, submission);
+
+      for (final item in items) {
+        final value = _answerFor(item);
+        final reason = _controller('reason_${item.id}').text.trim();
+        stage = 'menyimpan jawaban untuk bagian ${item.label}';
+        await firestore.saveAnswerForItem(
+          submissionId: submissionId,
+          itemId: item.id,
+          answer: {
+            'submission_id': submissionId,
+            'template_item_id': item.id,
+            'kategori': item.kategori,
+            'label': item.label,
+            'nilai_jawaban': value,
+            'alasan': reason.isEmpty ? null : reason,
+            'status_gagal': value.isNotEmpty &&
+                item.isFailValue(value) &&
+                item.autoRejectOnFail,
+          },
+        );
+        final evidence = _evidence[item.id];
+        final position = _positions[item.id];
+        if (evidence != null && position != null) {
+          stage = 'mengunggah foto untuk bagian ${item.label}';
+          await _uploadEvidence(
+            submissionId: submissionId,
+            item: item,
+            evidence: evidence,
+            position: position,
+            timestamp: _captureTimes[item.id] ?? now,
+            storage: storage,
+            firestore: firestore,
+          );
+        }
+      }
+      ref.invalidate(userSubmissionsProvider);
+      if (!mounted) return;
+      context.go('/history');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Draft berhasil disimpan.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        _showError(
+          'Gagal saat $stage. ${ErrorMessage.from(error)}',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Map<String, dynamic> _collectGeneralData(String role) => {
+        for (final field in _fieldsFor(role))
+          if (_controller(field.name).text.trim().isNotEmpty)
+            field.name: field.numeric
+                ? _parseNumber(_controller(field.name).text.trim()) ??
+                    _controller(field.name).text.trim()
+                : _controller(field.name).text.trim(),
+      };
+
+  Future<void> _uploadEvidence({
+    required String submissionId,
+    required ChecklistTemplateItemModel item,
+    required XFile evidence,
+    required Position position,
+    required DateTime timestamp,
+    required StorageService storage,
+    required FirestoreService firestore,
+  }) async {
+    final extension = evidence.path.split('.').last.toLowerCase();
+    final fileLength = await File(evidence.path).length();
+    const maxSize = AppConstants.maxPhotoSizeKb * 1024;
+    if (fileLength > maxSize) {
+      throw StateError(
+        'Ukuran foto maksimal ${AppConstants.maxPhotoSizeKb} KB.',
+      );
+    }
+    final mediaType = extension == 'jpg' || extension == 'jpeg'
+        ? 'image/jpeg'
+        : 'image/$extension';
+    final storagePath = await storage.uploadEvidenceMedia(
+      submissionId: submissionId,
+      answerId: item.id,
+      file: File(evidence.path),
+      contentType: mediaType,
+    );
+    await storage.completeEvidenceUpload(
+      storagePath: storagePath,
+      type: 'foto',
+      latitude: position.latitude,
+      longitude: position.longitude,
+      timestamp: timestamp,
+    );
+    final media = await firestore.getAnswerMedia(submissionId, item.id);
+    media.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    if (media.isNotEmpty && mounted) {
+      setState(() {
+        _savedEvidence[item.id] = media.first;
+        _evidence.remove(item.id);
+        _positions.remove(item.id);
+        _captureTimes.remove(item.id);
+      });
+    }
+  }
+
   Future<void> _submit({
     required ChecklistTemplateModel template,
     required List<ChecklistTemplateItemModel> items,
@@ -286,9 +502,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
           return;
         }
       }
-      if (field.dateTime &&
-          value.isNotEmpty &&
-          !_isValidDateTime(value)) {
+      if (field.dateTime && value.isNotEmpty && !_isValidDateTime(value)) {
         _showError('${field.label} harus berupa tanggal dan waktu yang valid.');
         return;
       }
@@ -296,8 +510,8 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
     final currentAnswers = _currentAnswers(items);
     for (final item in items) {
-      if (_evidence[item.id] == null) {
-        _showError('Ambil foto bukti untuk: ${item.label}.');
+      if (_evidence[item.id] == null && _savedEvidence[item.id] == null) {
+        _showError('Wajib mengambil foto bukti untuk: ${item.label}.');
         return;
       }
       final value = currentAnswers[item.id] ?? '';
@@ -326,30 +540,29 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
+    if (!_confirmsAccuracy) {
+      _showError(
+        'Centang pernyataan kebenaran data sebelum mengirim deklarasi.',
+      );
+      return;
+    }
+
     final pin = await _requestPin();
     if (pin == null || !mounted) return;
 
     setState(() => _isSubmitting = true);
+    var submissionStage = 'menyimpan data umum';
     try {
       final firestore = ref.read(firestoreServiceProvider);
       final storage = StorageService();
       final submissionId = _draftId ?? firestore.newSubmissionId();
       _draftId = submissionId;
       final now = DateTime.now();
-      final dataUmum = <String, dynamic>{
-        for (final field in _fieldsFor(user.role))
-          if (_controller(field.name).text.trim().isNotEmpty)
-            field.name: field.numeric
-                ? _parseNumber(_controller(field.name).text.trim()) ??
-                    _controller(field.name).text.trim()
-                : _controller(field.name).text.trim(),
-      };
-
       final submission = SubmissionModel(
         id: submissionId,
         modaTransportasi: template.modaTransportasi,
         templateId: template.id,
-        dataUmum: dataUmum,
+        dataUmum: _collectGeneralData(user.role),
         pengisiId: user.id,
         status: AppConstants.statusDraft,
         createdAt: now,
@@ -358,6 +571,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       await firestore.createSubmissionWithId(submissionId, submission);
 
       for (final item in items) {
+        submissionStage = 'menyimpan jawaban untuk bagian ${item.label}';
         final value = currentAnswers[item.id] ?? '';
         final failed = value.isNotEmpty && item.isFailValue(value);
         await firestore.saveAnswerForItem(
@@ -380,33 +594,20 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         final position = _positions[item.id];
 
         if (evidence != null && position != null) {
-          final extension = evidence.path.split('.').last.toLowerCase();
-          final fileLength = await File(evidence.path).length();
-          const maxSize = AppConstants.maxPhotoSizeKb * 1024;
-          if (fileLength > maxSize) {
-            throw StateError(
-              'Ukuran foto maksimal ${AppConstants.maxPhotoSizeKb} KB.',
-            );
-          }
-          final mediaType = extension == 'jpg' || extension == 'jpeg'
-              ? 'image/jpeg'
-              : 'image/$extension';
-          final fileUrl = await storage.uploadEvidenceMedia(
+          submissionStage = 'mengunggah foto untuk bagian ${item.label}';
+          await _uploadEvidence(
             submissionId: submissionId,
-            answerId: item.id,
-            file: File(evidence.path),
-            contentType: mediaType,
-          );
-          await storage.completeEvidenceUpload(
-            storagePath: fileUrl,
-            type: 'foto',
-            latitude: position.latitude,
-            longitude: position.longitude,
+            item: item,
+            evidence: evidence,
+            position: position,
             timestamp: _captureTimes[item.id] ?? now,
+            storage: storage,
+            firestore: firestore,
           );
         }
       }
 
+      submissionStage = 'mengesahkan deklarasi dengan PIN';
       final status = await ref.read(authServiceProvider).signSubmission(
             submissionId: submissionId,
             pin: pin,
@@ -445,7 +646,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     } catch (error) {
       if (mounted) {
         _showError(
-          'Deklarasi belum dapat dikirim: '
+          'Gagal saat $submissionStage. '
           '${ErrorMessage.from(error, fallback: 'Periksa data lalu coba kembali.')}',
         );
       }
@@ -460,6 +661,50 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     );
   }
 
+  Widget _buildDraftBody(BuildContext context, UserModel? user) {
+    final future = _draftFuture;
+    if (future == null) {
+      return const _EmptyState(
+        icon: Icons.cloud_off_outlined,
+        title: 'Draft tidak dapat dibuka',
+        message: 'Silakan kembali ke Riwayat dan coba lagi.',
+      );
+    }
+    return FutureBuilder<_DraftFormData>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _ErrorState(
+            message: 'Draft tidak dapat dimuat: '
+                '${ErrorMessage.from(snapshot.error!)}',
+            onRetry: () => setState(() {
+              _draftFuture = _loadDraft(widget.draftId!);
+            }),
+          );
+        }
+        final data = snapshot.data;
+        if (data == null) {
+          return const _EmptyState(
+            icon: Icons.description_outlined,
+            title: 'Draft tidak ditemukan',
+            message: 'Kembali ke Riwayat untuk memilih draft yang tersedia.',
+          );
+        }
+        if (data.items.isEmpty) {
+          return const _EmptyState(
+            icon: Icons.checklist_outlined,
+            title: 'Checklist tidak tersedia',
+            message: 'Template draft ini belum memiliki bagian pemeriksaan.',
+          );
+        }
+        return _buildForm(context, data.template, data.items, user);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).valueOrNull;
@@ -467,13 +712,17 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(user?.isKepala == true
+        title: Text(widget.draftId != null
+            ? 'Lanjutkan draft'
+            : user?.isKepala == true
             ? user!.role == AppConstants.roleKepalaKapal
                 ? 'Pemeriksaan Kapal'
                 : 'Pemeriksaan Pesawat'
             : 'Deklarasi Sanitasi'),
       ),
-      body: template.when(
+      body: widget.draftId != null
+          ? _buildDraftBody(context, user)
+          : template.when(
         data: (activeTemplate) {
           if (activeTemplate == null) {
             return const _EmptyState(
@@ -491,7 +740,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                   icon: Icons.checklist_outlined,
                   title: 'Checklist masih kosong',
                   message:
-                      'Template aktif belum memiliki butir pemeriksaan. Hubungi administrator.',
+                      'Template aktif belum memiliki bagian pemeriksaan. Hubungi administrator.',
                 );
               }
               return _buildForm(context, activeTemplate, items, user);
@@ -501,13 +750,12 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               message:
                   'Checklist tidak dapat dimuat: ${ErrorMessage.from(error)}',
               onRetry: () => ref.invalidate(templateItemsProvider),
-            ),
+                  ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _ErrorState(
-          message:
-              'Template tidak dapat dimuat: ${ErrorMessage.from(error)}',
+          message: 'Template tidak dapat dimuat: ${ErrorMessage.from(error)}',
           onRetry: () => ref.invalidate(activeTemplateProvider),
         ),
       ),
@@ -572,7 +820,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                   number: '02',
                   title: 'Checklist sanitasi',
                   subtitle:
-                      'Lengkapi jawaban dan sertakan foto pada setiap butir.',
+                      'Lengkapi jawaban dan sertakan foto pada setiap bagian.',
                 ),
                 const SizedBox(height: 8),
                 for (final entry in categories.entries) ...[
@@ -584,15 +832,42 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                   ],
                   const SizedBox(height: 8),
                 ],
+                CheckboxListTile(
+                  value: _confirmsAccuracy,
+                  onChanged: _isSubmitting
+                      ? null
+                      : (value) => setState(
+                            () => _confirmsAccuracy = value ?? false,
+                          ),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  dense: true,
+                  title: const Text(
+                    'Saya menyatakan seluruh data sesuai kondisi sebenarnya di lokasi pemeriksaan dan foto bukti diambil pada bagian yang diperiksa.',
+                    style: TextStyle(fontSize: 11, height: 1.35),
+                  ),
+                ),
                 const _DeclarationNotice(),
                 const SizedBox(height: 17),
                 SizedBox(
+                  height: 44,
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isSubmitting
+                        ? null
+                        : () => _saveDraft(template: template, items: items),
+                    icon: const Icon(Icons.save_outlined, size: 18),
+                    label: const Text('Simpan draft'),
+                  ),
+                ),
+                const SizedBox(height: 9),
+                SizedBox(
                   height: 46,
-                  child: FilledButton.icon(
+                  child: FilledButton(
                     onPressed: _isSubmitting
                         ? null
                         : () => _submit(template: template, items: items),
-                    icon: _isSubmitting
+                    child: _isSubmitting
                         ? const SizedBox(
                             width: 18,
                             height: 18,
@@ -601,12 +876,11 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.draw_outlined),
-                    label: Text(
-                      _isSubmitting
-                          ? 'Mengirim deklarasi...'
-                          : 'Tanda tangani & kirim',
-                    ),
+                        : Text(
+                            _isSubmitting
+                                ? 'Mengirim deklarasi...'
+                                : 'Tanda tangani & kirim',
+                          ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -656,13 +930,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         hintText: field.hint,
         labelStyle: const TextStyle(fontSize: 10),
         hintStyle: const TextStyle(fontSize: 9),
-        prefixIcon: Icon(
-          field.icon,
-          size: 16,
-          color: SiskaraTheme.primaryBlue,
-        ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 30, minHeight: 34),
         suffixIcon: field.dateTime
             ? const Icon(Icons.calendar_month_outlined, size: 15)
             : null,
@@ -740,7 +1007,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
           ? const [
               _GeneralFieldGroup(
                 title: 'Identitas kapal',
-                icon: Icons.directions_boat_outlined,
                 fieldNames: [
                   'nama_kapal',
                   'jenis_kapal',
@@ -751,7 +1017,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               ),
               _GeneralFieldGroup(
                 title: 'Rute & pemeriksaan',
-                icon: Icons.route_outlined,
                 fieldNames: [
                   'pelabuhan_asal',
                   'tujuan_pelabuhan_berikutnya',
@@ -764,14 +1029,12 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               ),
               _GeneralFieldGroup(
                 title: 'Jumlah orang',
-                icon: Icons.groups_outlined,
                 fieldNames: ['jumlah_awak_kapal', 'jumlah_penumpang'],
               ),
             ]
           : const [
               _GeneralFieldGroup(
                 title: 'Identitas penerbangan',
-                icon: Icons.flight_outlined,
                 fieldNames: [
                   'pemilik_atau_penyelenggara',
                   'nomor_penerbangan',
@@ -780,7 +1043,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               ),
               _GeneralFieldGroup(
                 title: 'Rute & jadwal',
-                icon: Icons.route_outlined,
                 fieldNames: ['berangkat_dari', 'tujuan', 'tanggal_jam'],
               ),
             ];
@@ -793,8 +1055,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       ? 'masukkan jumlah dalam bilangan bulat yang valid.'
       : 'masukkan angka yang valid.';
 
-  static bool _isValidDateTime(String value) =>
-      _parseDateTime(value) != null;
+  static bool _isValidDateTime(String value) => _parseDateTime(value) != null;
 
   static DateTime? _parseDateTime(String value) {
     try {
@@ -811,6 +1072,8 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     final options = _optionsFor(item);
     final evidence = _evidence[item.id];
     final position = _positions[item.id];
+    final savedEvidence = _savedEvidence[item.id];
+    final hasEvidence = evidence != null || savedEvidence != null;
 
     return _SurfaceCard(
       child: Column(
@@ -819,21 +1082,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: SiskaraTheme.primaryBlue.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.fact_check_outlined,
-                  size: 16,
-                  color: SiskaraTheme.primaryBlue,
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   item.label,
@@ -843,15 +1091,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                   ),
                 ),
               ),
-              if (item.autoRejectOnFail)
-                const Tooltip(
-                  message: 'Temuan dapat ditolak otomatis',
-                  child: Icon(
-                    Icons.warning_amber_rounded,
-                    size: 18,
-                    color: SiskaraTheme.warning,
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 7),
@@ -860,7 +1099,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               initialValue: selected,
               validator: (value) => value == null || value.isEmpty
                   ? item.isRequiredFor(_answers)
-                      ? 'Pilih kondisi untuk butir ini.'
+                      ? 'Pilih kondisi untuk bagian ini.'
                       : null
                   : null,
               builder: (field) {
@@ -875,7 +1114,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                     if (options.length == 2)
                       Row(
                         children: [
-                          for (var index = 0; index < options.length; index++) ...[
+                          for (var index = 0;
+                              index < options.length;
+                              index++) ...[
                             if (index > 0) const SizedBox(width: 7),
                             Expanded(
                               child: _AnswerOptionButton(
@@ -977,15 +1218,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.photo_camera_back_outlined,
-                      size: 16,
-                      color: SiskaraTheme.primaryBlue,
-                    ),
-                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Foto bukti wajib untuk setiap butir',
+                        'Wajib mengambil foto bukti',
                         style:
                             Theme.of(context).textTheme.labelMedium?.copyWith(
                                   color: SiskaraTheme.primaryDark,
@@ -993,7 +1228,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                                 ),
                       ),
                     ),
-                    if (evidence != null)
+                    if (hasEvidence)
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 4),
@@ -1001,31 +1236,20 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                           color: SiskaraTheme.success.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              size: 13,
-                              color: SiskaraTheme.success,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Siap',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: SiskaraTheme.success,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                        child: const Text(
+                          'Siap',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: SiskaraTheme.success,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 3),
                 const Text(
-                  'Ambil foto dengan kamera; lokasi dan waktu ikut dicatat.',
+                  'Lokasi dan waktu foto tercatat.',
                   style: TextStyle(
                     color: SiskaraTheme.textSecondary,
                     fontSize: 10,
@@ -1034,17 +1258,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 const SizedBox(height: 7),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
+                  child: OutlinedButton(
                     onPressed:
                         _isSubmitting ? null : () => _captureEvidence(item),
-                    icon: Icon(
-                      evidence == null
-                          ? Icons.photo_camera_outlined
-                          : Icons.refresh_rounded,
-                      size: 16,
-                    ),
-                    label:
-                        Text(evidence == null ? 'Ambil foto' : 'Ulangi foto'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 9),
                       minimumSize: const Size(0, 38),
@@ -1053,43 +1269,43 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    child: Text(
+                      hasEvidence ? 'Ulangi foto' : 'Ambil foto',
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          if (evidence != null && position != null) ...[
+          if (hasEvidence) ...[
             const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(9),
-              child: Image.file(
-                File(evidence.path),
-                height: 126,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 92,
-                  color: SiskaraTheme.primaryDark.withValues(alpha: 0.08),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'Pratinjau foto tidak tersedia',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                ),
-              ),
+              child: evidence != null
+                  ? Image.file(
+                      File(evidence.path),
+                      height: 126,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _unavailableEvidencePreview(),
+                    )
+                  : _StoredEvidencePreview(
+                      storagePath: savedEvidence!.fileUrl,
+                    ),
             ),
             const SizedBox(height: 3),
             Row(
               children: [
-                const Icon(
-                  Icons.location_on_outlined,
-                  size: 14,
-                  color: SiskaraTheme.success,
-                ),
-                const SizedBox(width: 3),
                 Expanded(
                   child: Text(
-                    '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)} • ${_captureTimes[item.id]?.toLocal().toString().substring(0, 16) ?? ''}',
+                    position != null && _captureTimes[item.id] != null
+                        ? '${position.latitude.toStringAsFixed(4)}, '
+                            '${position.longitude.toStringAsFixed(4)} • '
+                            '${_captureTimes[item.id]!.toLocal().toString().substring(0, 16)}'
+                        : '${savedEvidence?.latitude?.toStringAsFixed(4) ?? '-'}, '
+                            '${savedEvidence?.longitude?.toStringAsFixed(4) ?? '-'} • '
+                            '${savedEvidence?.timestamp.toLocal().toString().substring(0, 16) ?? ''}',
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: SiskaraTheme.textSecondary,
@@ -1097,43 +1313,102 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Hapus bukti',
-                  visualDensity: VisualDensity.compact,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 32,
-                    height: 32,
+                if (evidence != null)
+                  TextButton(
+                    onPressed: _isSubmitting
+                        ? null
+                        : () => setState(() {
+                              _evidence.remove(item.id);
+                              _positions.remove(item.id);
+                              _captureTimes.remove(item.id);
+                            }),
+                    child: const Text('Hapus foto baru'),
                   ),
-                  onPressed: _isSubmitting
-                      ? null
-                      : () => setState(() {
-                            _evidence.remove(item.id);
-                            _positions.remove(item.id);
-                            _captureTimes.remove(item.id);
-                          }),
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: SiskaraTheme.error,
-                    size: 17,
-                  ),
-                ),
               ],
             ),
-          ] else
-            const Padding(
-              padding: EdgeInsets.only(top: 6, left: 2),
-              child: Text(
-                'Foto wajib memuat lokasi GPS dan waktu pengambilan.',
-                style: TextStyle(
-                  color: SiskaraTheme.textSecondary,
-                  fontSize: 9,
-                ),
-              ),
-            ),
+          ],
         ],
       ),
     );
   }
+
+  Widget _unavailableEvidencePreview() => Container(
+        height: 92,
+        color: SiskaraTheme.primaryDark.withValues(alpha: 0.08),
+        alignment: Alignment.center,
+        child: const Text(
+          'Pratinjau foto tidak tersedia',
+          style: TextStyle(fontSize: 11),
+        ),
+      );
+
+}
+
+class _StoredEvidencePreview extends StatefulWidget {
+  const _StoredEvidencePreview({required this.storagePath});
+
+  final String storagePath;
+
+  @override
+  State<_StoredEvidencePreview> createState() => _StoredEvidencePreviewState();
+}
+
+class _StoredEvidencePreviewState extends State<_StoredEvidencePreview> {
+  late Future<String> _downloadUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _downloadUrl = StorageService().getDownloadUrl(widget.storagePath);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: _downloadUrl,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Container(
+            height: 92,
+            color: SiskaraTheme.primaryDark.withValues(alpha: 0.08),
+            alignment: Alignment.center,
+            child: const Text(
+              'Foto tersimpan, pratinjau tidak tersedia.',
+              style: TextStyle(fontSize: 11),
+            ),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 126,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return Image.network(
+          snapshot.data!,
+          height: 126,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            height: 92,
+            color: SiskaraTheme.primaryDark.withValues(alpha: 0.08),
+            alignment: Alignment.center,
+            child: const Text(
+              'Foto tersimpan, pratinjau tidak tersedia.',
+              style: TextStyle(fontSize: 11),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DraftFormData {
+  const _DraftFormData({required this.template, required this.items});
+
+  final ChecklistTemplateModel template;
+  final List<ChecklistTemplateItemModel> items;
 }
 
 class _GeneralField {
@@ -1145,6 +1420,7 @@ class _GeneralField {
     this.wholeNumber = false,
     this.dateTime = false,
     this.hint,
+    this.fullWidth,
   });
   final String name;
   final String label;
@@ -1153,41 +1429,16 @@ class _GeneralField {
   final bool wholeNumber;
   final bool dateTime;
   final String? hint;
-
-  IconData get icon {
-    if (dateTime) return Icons.schedule_outlined;
-    if (numeric) {
-      return name == 'besar_kapal_grt'
-          ? Icons.scale_outlined
-          : Icons.groups_outlined;
-    }
-    if (name.contains('nama') ||
-        name.contains('pemilik') ||
-        name.contains('penyelenggara')) {
-      return Icons.business_outlined;
-    }
-    if (name.contains('pelabuhan') ||
-        name.contains('tujuan') ||
-        name.contains('berangkat')) {
-      return Icons.place_outlined;
-    }
-    if (name.contains('bendera')) return Icons.flag_outlined;
-    if (name.contains('nomor') || name.contains('pendaftaran')) {
-      return Icons.confirmation_number_outlined;
-    }
-    return Icons.directions_outlined;
-  }
+  final bool? fullWidth;
 }
 
 class _GeneralFieldGroup {
   const _GeneralFieldGroup({
     required this.title,
-    required this.icon,
     required this.fieldNames,
   });
 
   final String title;
-  final IconData icon;
   final List<String> fieldNames;
 }
 
@@ -1210,8 +1461,6 @@ class _GeneralFieldGroupCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(group.icon, size: 17, color: SiskaraTheme.primaryBlue),
-              const SizedBox(width: 7),
               Expanded(
                 child: Text(
                   group.title,
@@ -1241,8 +1490,8 @@ class _GeneralFieldGroupCard extends StatelessWidget {
                 children: [
                   for (final field in fields)
                     SizedBox(
-                      width: field.dateTime
-                              || field.label.length > 18
+                      width: (field.fullWidth ??
+                              (field.dateTime || field.label.length > 18))
                           ? constraints.maxWidth
                           : compactWidth,
                       child: buildField(field),
@@ -1284,23 +1533,13 @@ class _AnswerOptionButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected
-                  ? SiskaraTheme.primaryBlue
-                  : SiskaraTheme.divider,
+              color: selected ? SiskaraTheme.primaryBlue : SiskaraTheme.divider,
               width: selected ? 1.3 : 1,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (selected) ...[
-                const Icon(
-                  Icons.check_circle,
-                  size: 14,
-                  color: SiskaraTheme.primaryBlue,
-                ),
-                const SizedBox(width: 4),
-              ],
               Flexible(
                 child: Text(
                   label,
@@ -1520,22 +1759,13 @@ class _DeclarationNotice extends StatelessWidget {
         color: const Color(0xFFFFF7E8),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: Color(0xFF9A6B1D), size: 19),
-          SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              'Pastikan informasi dan bukti pemeriksaan benar. Deklarasi ditandatangani oleh pemilik akun dan menjadi bagian dari catatan pemeriksaan.',
-              style: TextStyle(
-                color: Color(0xFF71582E),
-                fontSize: 11,
-                height: 1.45,
-              ),
-            ),
-          ),
-        ],
+      child: const Text(
+        'Deklarasi ditandatangani oleh pemilik akun dan menjadi bagian dari catatan pemeriksaan.',
+        style: TextStyle(
+          color: Color(0xFF71582E),
+          fontSize: 11,
+          height: 1.45,
+        ),
       ),
     );
   }

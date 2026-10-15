@@ -21,7 +21,7 @@ class UnsupportedRoleScreen extends ConsumerWidget {
                 Text(
                   FirebaseAuth.instance.currentUser == null
                       ? 'Akun ini tidak dapat menggunakan aplikasi mobile.'
-                      : 'Akun Admin menggunakan portal web SISKARA.',
+                      : 'Akun Admin menggunakan portal web ARJUNA.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),

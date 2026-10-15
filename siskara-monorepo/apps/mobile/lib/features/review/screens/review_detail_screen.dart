@@ -13,8 +13,13 @@ import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
 
 class ReviewDetailScreen extends ConsumerStatefulWidget {
-  const ReviewDetailScreen({super.key, required this.submissionId});
+  const ReviewDetailScreen({
+    super.key,
+    required this.submissionId,
+    this.readOnly = false,
+  });
   final String submissionId;
+  final bool readOnly;
 
   @override
   ConsumerState<ReviewDetailScreen> createState() => _ReviewDetailScreenState();
@@ -81,7 +86,9 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).valueOrNull;
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail pemeriksaan')),
+      appBar: AppBar(
+        title: Text(widget.readOnly ? 'Detail pengajuan' : 'Detail pemeriksaan'),
+      ),
       body: FutureBuilder<_ReviewData?>(
         future: _reviewFuture,
         builder: (context, snapshot) {
@@ -158,14 +165,14 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                       'Checklist menemukan kondisi yang memenuhi kriteria penolakan otomatis.',
                 ),
               ],
-              if (review.submission.status != 'menunggu_verifikasi_staf') ...[
+              if (widget.readOnly ||
+                  review.submission.status != 'menunggu_verifikasi_staf') ...[
                 const SizedBox(height: 14),
                 const _NoticeCard(
                   icon: Icons.visibility_outlined,
                   color: SiskaraTheme.textSecondary,
-                  title: 'Mode baca saja',
-                  message:
-                      'Keputusan akhir hanya dapat diberikan pada pengajuan yang menunggu verifikasi.',
+                  title: 'Informasi pengajuan',
+                  message: 'Data pengajuan ini ditampilkan dalam mode baca saja.',
                 ),
               ],
             ],
@@ -178,6 +185,9 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
           FutureBuilder<_ReviewData?>(
             future: _reviewFuture,
             builder: (context, snapshot) {
+              if (widget.readOnly || user?.isStaf != true) {
+                return const SizedBox.shrink();
+              }
               if (snapshot.data?.submission.status !=
                   'menunggu_verifikasi_staf') {
                 return const SizedBox.shrink();

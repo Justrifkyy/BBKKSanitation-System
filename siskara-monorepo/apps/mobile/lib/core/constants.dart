@@ -1,11 +1,11 @@
-/// Application-wide constants for SISKARA
+/// Application-wide constants for ARJUNA.
 class AppConstants {
   AppConstants._();
 
   // ─── App Info ───────────────────────────────────────────
-  static const String appName = 'SISKARA';
+  static const String appName = 'ARJUNA';
   static const String appFullName =
-      'Sistem Skrining dan Pemeriksaan Kesehatan Kapal dan Pesawat Udara';
+      'Aplikasi Skrining dan Pemeriksaan Sanitasi Transportasi';
   static const String clientName =
       'Balai Besar Kekarantinaan Kesehatan (BBKK) Makassar';
   static const String ministry = 'Kementerian Kesehatan RI';
@@ -54,7 +54,10 @@ class AppConstants {
 
   // ─── API Base URL ──────────────────────────────────────
   static const String apiBaseUrl = String.fromEnvironment(
-    'SISKARA_API_BASE_URL',
-    defaultValue: 'https://lycabyte.store/api',
+    'ARJUNA_API_BASE_URL',
+    defaultValue: String.fromEnvironment(
+      'SISKARA_API_BASE_URL',
+      defaultValue: 'https://lycabyte.store/api',
+    ),
   );
 }

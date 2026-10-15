@@ -12,7 +12,7 @@ void main() async {
 
   runApp(
     const ProviderScope(
-      child: SiskaraApp(),
+      child: ArjunaApp(),
     ),
   );
 }

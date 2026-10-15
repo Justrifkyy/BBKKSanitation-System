@@ -101,46 +101,66 @@ export async function POST(request: NextRequest) {
       { status: 404 },
     );
   }
-  const currentSignature = userDoc.data()?.signature_url;
-  if (typeof currentSignature === "string" && currentSignature.length > 0) {
-    return NextResponse.json(
-      { error: "Tanda tangan sudah disimpan dan tidak dapat diganti." },
-      { status: 409 },
-    );
-  }
-
   const permanentKey = `signatures/${authResult.user.uid}/${uploadMatch[2]}.${extension}`;
   await promoteObject(filePath, permanentKey);
   const signatureUrl = storagePath(permanentKey);
+  const auditRef = adminDb.collection(COLLECTIONS.AUDIT_LOG).doc();
+  let previousSignature: unknown;
   try {
     await adminDb.runTransaction(async (transaction) => {
       const currentUser = await transaction.get(userRef);
-      const currentValue = currentUser.data()?.signature_url;
-      if (
-        !currentUser.exists ||
-        (typeof currentValue === "string" && currentValue.length > 0)
-      ) {
-        throw new Error("SIGNATURE_ALREADY_SET");
+      if (!currentUser.exists) {
+        throw new Error("SIGNATURE_PROFILE_NOT_FOUND");
       }
+      previousSignature = currentUser.data()?.signature_url;
       transaction.update(userRef, { signature_url: signatureUrl });
+      transaction.set(auditRef, {
+        user_id: authResult.user.uid,
+        aksi:
+          typeof previousSignature === "string" && previousSignature.length > 0
+            ? "update_signature"
+            : "save_signature",
+        entitas_terkait: `users/${authResult.user.uid}`,
+        waktu: new Date(),
+      });
     });
   } catch (error) {
     await deleteObject(permanentKey);
-    if (error instanceof Error && error.message === "SIGNATURE_ALREADY_SET") {
+    if (
+      error instanceof Error &&
+      error.message === "SIGNATURE_PROFILE_NOT_FOUND"
+    ) {
       return NextResponse.json(
-        { error: "Tanda tangan sudah disimpan dan tidak dapat diganti." },
-        { status: 409 },
+        { error: "Profil pengguna tidak ditemukan." },
+        { status: 404 },
       );
     }
     throw error;
   }
 
-  await adminDb.collection(COLLECTIONS.AUDIT_LOG).add({
-    user_id: authResult.user.uid,
-    aksi: "save_signature",
-    entitas_terkait: `users/${authResult.user.uid}`,
-    waktu: new Date(),
-  });
+  const previousPath =
+    typeof previousSignature === "string"
+      ? parseStoragePath(previousSignature)
+      : null;
+  const previousParts = previousPath?.split("/") ?? [];
+  const previousIsOwnedSignature =
+    previousParts.length === 3 &&
+    previousParts[0] === "signatures" &&
+    previousParts[1] === authResult.user.uid &&
+    /^(?:signature\.png|[0-9a-f-]{36}\.(?:png|svg))$/i.test(
+      previousParts[2],
+    );
+  if (
+    previousPath !== null &&
+    previousIsOwnedSignature &&
+    previousPath !== permanentKey
+  ) {
+    try {
+      await deleteObject(previousPath);
+    } catch (error) {
+      console.error("Unable to remove replaced signature from R2.", error);
+    }
+  }
 
   return NextResponse.json({ success: true });
 }

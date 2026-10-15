@@ -127,8 +127,14 @@ service cloud.firestore {
                   || hasRole('staf_bbkk')
                   || hasRole('validator_admin');
 
-      // Status changes and final decisions are written only by trusted API routes.
-      allow update: if false;
+      // Owners may correct general data only while a submission is still a draft.
+      // Status changes and final decisions remain restricted to trusted API routes.
+      allow update: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
+                    && ownsDraftSubmission(submissionId)
+                    && resource.data.pengisi_id == request.auth.uid
+                    && request.resource.data.status == resource.data.status
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['data_umum', 'updated_at']);
 
       allow delete: if false; // Submissions are never deleted
 

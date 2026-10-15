@@ -39,7 +39,7 @@ export async function evaluateSubmissionAnswers(
   }
   if (itemsSnapshot.empty) {
     throw new SubmissionValidationError(
-      "Template checklist belum memiliki butir pemeriksaan.",
+      "Template checklist belum memiliki bagian pemeriksaan.",
     );
   }
 
@@ -59,6 +59,19 @@ export async function evaluateSubmissionAnswers(
   for (const itemDoc of itemsSnapshot.docs) {
     const item = itemDoc.data();
     const answerDoc = answers.get(itemDoc.id);
+    const mediaSnapshot = await submissionRef
+      .collection(COLLECTIONS.SUBMISSION_ANSWERS)
+      .doc(itemDoc.id)
+      .collection(COLLECTIONS.SUBMISSION_ANSWER_MEDIA)
+      .where("tipe", "==", "foto")
+      .limit(1)
+      .get();
+    if (mediaSnapshot.empty) {
+      throw new SubmissionValidationError(
+        `Foto bukti wajib dilampirkan untuk bagian "${item.label || itemDoc.id}".`,
+      );
+    }
+
     const requiredCondition = item.wajib_jika as Record<string, unknown> | undefined;
     const conditionMatches = (condition: unknown) => {
       if (typeof condition !== "object" || condition === null) return false;
@@ -76,7 +89,7 @@ export async function evaluateSubmissionAnswers(
     if (!answerDoc) {
       if (isRequired) {
         throw new SubmissionValidationError(
-          `Butir checklist "${item.label || itemDoc.id}" belum dijawab.`,
+          `Bagian checklist "${item.label || itemDoc.id}" belum dijawab.`,
         );
       }
       continue;
@@ -106,14 +119,6 @@ export async function evaluateSubmissionAnswers(
           ? failValues
           : []
         : [item.nilai_perlu_alasan];
-    const mediaValues = Array.isArray(item.nilai_perlu_media)
-      ? item.nilai_perlu_media
-      : item.nilai_perlu_media === undefined || item.nilai_perlu_media === null
-        ? isFailure
-          ? failValues
-          : []
-        : [item.nilai_perlu_media];
-
     if (reasonValues.some((requiredValue: unknown) => String(requiredValue) === String(value))) {
       if (typeof answer.alasan !== "string" || !answer.alasan.trim()) {
         throw new SubmissionValidationError(
@@ -122,20 +127,6 @@ export async function evaluateSubmissionAnswers(
       }
     }
 
-    if (mediaValues.some((requiredValue: unknown) => String(requiredValue) === String(value))) {
-      const mediaSnapshot = await submissionRef
-        .collection(COLLECTIONS.SUBMISSION_ANSWERS)
-        .doc(answerDoc.id)
-        .collection(COLLECTIONS.SUBMISSION_ANSWER_MEDIA)
-        .limit(1)
-        .get();
-      if (mediaSnapshot.empty) {
-        throw new SubmissionValidationError(
-          `Bukti foto/video wajib dilampirkan untuk "${item.label || itemDoc.id}".`,
-        );
-      }
-
-    }
     if (isFailure && item.auto_reject_on_fail === true) hasAutoReject = true;
   }
 

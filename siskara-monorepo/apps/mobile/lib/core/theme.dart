@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// SISKARA Design System — Colors, Typography, and Theme Data
+/// ARJUNA design system — colors, typography, and theme data.
 class SiskaraTheme {
   SiskaraTheme._();
 

@@ -8,6 +8,8 @@ import {
 } from "@/lib/submission-evaluation";
 import { NextRequest, NextResponse } from "next/server";
 
+class SubmissionStateConflict extends Error {}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -52,6 +54,20 @@ export async function POST(
     );
   }
   if (data.status !== SUBMISSION_STATUS.DRAFT) {
+    const existingSignature = await adminDb
+      .collection(COLLECTIONS.DOCUMENT_SIGNATURES)
+      .doc(`${submissionId}_declarant`)
+      .get();
+    if (
+      existingSignature.exists &&
+      (data.status === SUBMISSION_STATUS.AUTO_REJECTED ||
+        data.status === SUBMISSION_STATUS.PENDING_REVIEW)
+    ) {
+      return NextResponse.json({
+        success: true,
+        status: data.status,
+      });
+    }
     return NextResponse.json({ error: "Pengajuan tidak lagi berstatus draft." }, { status: 409 });
   }
   const requiredFields =
@@ -116,31 +132,55 @@ export async function POST(
     throw error;
   }
 
-  await adminDb.runTransaction(async (transaction) => {
-    const current = await transaction.get(submissionRef);
-    const existingSignature = await transaction.get(signatureRef);
-    if (!current.exists || current.data()?.status !== SUBMISSION_STATUS.DRAFT) {
-      throw new Error("Pengajuan sudah berubah dan tidak dapat ditandatangani.");
-    }
-    if (!existingSignature.exists) {
-      transaction.create(signatureRef, {
-        submission_id: submissionId,
-        user_id: authResult.user.uid,
-        role_saat_ttd: "pengisi",
-        waktu_ttd: new Date(),
-      });
-    }
-    transaction.update(submissionRef, {
-      status: evaluation.status,
-      updated_at: new Date(),
-    });
-    transaction.set(adminDb.collection(COLLECTIONS.AUDIT_LOG).doc(), {
-      user_id: authResult.user.uid,
-      aksi: evaluation.hasAutoReject ? "auto_reject" : "pass_to_review",
-      entitas_terkait: `submissions/${submissionId}`,
-      waktu: new Date(),
-    });
-  });
+  let status: string;
+  try {
+    status = await adminDb.runTransaction(async (transaction) => {
+      const current = await transaction.get(submissionRef);
+      const existingSignature = await transaction.get(signatureRef);
+      if (!current.exists) {
+        throw new SubmissionStateConflict("Pengajuan tidak ditemukan.");
+      }
 
-  return NextResponse.json({ success: true, status: evaluation.status });
+      const currentStatus = current.data()?.status;
+      if (currentStatus !== SUBMISSION_STATUS.DRAFT) {
+        if (
+          existingSignature.exists &&
+          (currentStatus === SUBMISSION_STATUS.AUTO_REJECTED ||
+            currentStatus === SUBMISSION_STATUS.PENDING_REVIEW)
+        ) {
+          return currentStatus;
+        }
+        throw new SubmissionStateConflict(
+          "Pengajuan sudah berubah dan tidak dapat ditandatangani.",
+        );
+      }
+
+      if (!existingSignature.exists) {
+        transaction.create(signatureRef, {
+          submission_id: submissionId,
+          user_id: authResult.user.uid,
+          role_saat_ttd: "pengisi",
+          waktu_ttd: new Date(),
+        });
+      }
+      transaction.update(submissionRef, {
+        status: evaluation.status,
+        updated_at: new Date(),
+      });
+      transaction.set(adminDb.collection(COLLECTIONS.AUDIT_LOG).doc(), {
+        user_id: authResult.user.uid,
+        aksi: evaluation.hasAutoReject ? "auto_reject" : "pass_to_review",
+        entitas_terkait: `submissions/${submissionId}`,
+        waktu: new Date(),
+      });
+      return evaluation.status;
+    });
+  } catch (error) {
+    if (error instanceof SubmissionStateConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    throw error;
+  }
+
+  return NextResponse.json({ success: true, status });
 }

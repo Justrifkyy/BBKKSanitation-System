@@ -1,4 +1,4 @@
-# SISKARA Mobile
+# ARJUNA Mobile
 
 Flutter application for ship captains, pilots, and BBKK staff. Admin accounts
 use the web portal.
@@ -12,9 +12,12 @@ Requirements:
   Android emulator (or an Android phone with USB debugging enabled)
 - Firebase app configuration generated for project `bbkk-9d446`
 
-The Android application ID is `store.lycabyte.siskara`. Firebase configuration
+The Android application ID is `store.lycabyte.siskara` (kept unchanged so the
+existing Firebase Android client configuration remains valid). Firebase configuration
 is in `lib/firebase_options.dart` and `android/app/google-services.json`.
 Do not replace these with service-account credentials.
+The launcher and sign-in screen use the ARJUNA system logo and BBKK logo from
+`assets/images/`.
 
 After installing Android Studio, open **SDK Manager** and install the Android
 SDK Platform and Build-Tools offered as recommended by Flutter. Then run:
@@ -30,15 +33,15 @@ an Android phone with USB debugging enabled. From `apps/mobile`:
 ```powershell
 flutter pub get
 flutter devices
-flutter run --dart-define=SISKARA_API_BASE_URL=https://<deployed-web-host>/api
+flutter run --dart-define=ARJUNA_API_BASE_URL=https://<deployed-web-host>/api
 ```
 
-The API URL must point to the deployed SISKARA Next.js web app, not just a
+The API URL must point to the deployed ARJUNA Next.js web app, not just a
 domain serving a static or unrelated website. For local web development on the
 Android emulator, start the web app on port 3000 and use:
 
 ```powershell
-flutter run --dart-define=SISKARA_API_BASE_URL=http://10.0.2.2:3000/api
+flutter run --dart-define=ARJUNA_API_BASE_URL=http://10.0.2.2:3000/api
 ```
 
 The Android debug manifest permits cleartext HTTP for local development only.
@@ -77,8 +80,12 @@ During account security setup, users can draw a signature in the app or select
 a PNG/SVG file up to 512 KB. The API validates the uploaded file type before it
 is saved to the private Cloudflare R2 bucket. Evidence photos and videos use
 the same private bucket; Firestore stores only protected object paths and
-metadata. The **Keluar** action returns to the login screen without saving the
-setup.
+metadata. Saved signatures can be replaced from the signature settings screen.
+The **Keluar** action returns to the login screen without saving the setup.
+
+When deploying changes to submission or signature APIs, deploy the web app and
+publish the Firestore rules in `firebase/firestore.rules` as well as installing
+the updated mobile APK.
 
 Firebase initialization uses generated platform options. To reconfigure the
 Android app after changing its application ID, run from this directory:
@@ -86,6 +93,11 @@ Android app after changing its application ID, run from this directory:
 ```powershell
 flutterfire configure --project=bbkk-9d446 --platforms=android --android-package-name=store.lycabyte.siskara
 ```
+
+The `SISKARA_API_BASE_URL` define is still accepted as a backwards-compatible
+alias, and the Android application ID remains tied to the existing Firebase
+configuration. These are internal integration identifiers, not the app's
+display name.
 
 ## Mobile navigation and evidence
 

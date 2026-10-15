@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:siskara_mobile/core/error_message.dart';
-import 'package:siskara_mobile/services/api_service.dart';
+import 'package:arjuna_mobile/core/error_message.dart';
+import 'package:arjuna_mobile/services/api_service.dart';
 
 void main() {
   group('ErrorMessage', () {
@@ -10,7 +10,7 @@ void main() {
         ErrorMessage.from(
           const ApiException('Internal server error', statusCode: 500),
         ),
-        'Server SISKARA sedang mengalami gangguan (HTTP 500). '
+        'Server ARJUNA sedang mengalami gangguan (HTTP 500). '
         'Coba kembali beberapa saat lagi.',
       );
     });

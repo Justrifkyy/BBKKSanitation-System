@@ -14,7 +14,8 @@ class FirestoreService {
   // ─── Checklist Templates ────────────────────────────────
 
   /// Get the active template for a given transport mode.
-  Future<ChecklistTemplateModel?> getActiveTemplate(String modaTransportasi) async {
+  Future<ChecklistTemplateModel?> getActiveTemplate(
+      String modaTransportasi) async {
     final snapshot = await _firestore
         .collection(AppConstants.colChecklistTemplates)
         .where('moda_transportasi', isEqualTo: modaTransportasi)
@@ -27,8 +28,19 @@ class FirestoreService {
     return ChecklistTemplateModel.fromMap(doc.data(), doc.id);
   }
 
+  /// Get a template by ID, including templates that are no longer active.
+  Future<ChecklistTemplateModel?> getTemplate(String templateId) async {
+    final doc = await _firestore
+        .collection(AppConstants.colChecklistTemplates)
+        .doc(templateId)
+        .get();
+    if (!doc.exists) return null;
+    return ChecklistTemplateModel.fromMap(doc.data()!, doc.id);
+  }
+
   /// Get all items for a template.
-  Future<List<ChecklistTemplateItemModel>> getTemplateItems(String templateId) async {
+  Future<List<ChecklistTemplateItemModel>> getTemplateItems(
+      String templateId) async {
     final snapshot = await _firestore
         .collection(AppConstants.colChecklistTemplates)
         .doc(templateId)
@@ -55,10 +67,28 @@ class FirestoreService {
     String submissionId,
     SubmissionModel submission,
   ) async {
-    await _firestore
-        .collection(AppConstants.colSubmissions)
-        .doc(submissionId)
-        .set(submission.toMap());
+    final submissionRef =
+        _firestore.collection(AppConstants.colSubmissions).doc(submissionId);
+    await _firestore.runTransaction((transaction) async {
+      final existing = await transaction.get(submissionRef);
+      if (!existing.exists) {
+        transaction.set(submissionRef, submission.toMap());
+        return;
+      }
+
+      final data = existing.data();
+      if (data?['pengisi_id'] != submission.pengisiId ||
+          data?['status'] != AppConstants.statusDraft) {
+        throw StateError(
+          'Pengajuan ini sudah terkirim atau tidak dapat dilanjutkan. '
+          'Periksa halaman riwayat sebelum membuat pengajuan baru.',
+        );
+      }
+      transaction.update(submissionRef, {
+        'data_umum': submission.dataUmum,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+    });
   }
 
   String newSubmissionId() =>
@@ -78,7 +108,8 @@ class FirestoreService {
   }
 
   /// Update a submission.
-  Future<void> updateSubmission(String submissionId, Map<String, dynamic> data) async {
+  Future<void> updateSubmission(
+      String submissionId, Map<String, dynamic> data) async {
     data['updated_at'] = FieldValue.serverTimestamp();
     await _firestore
         .collection(AppConstants.colSubmissions)
@@ -149,7 +180,8 @@ class FirestoreService {
   }
 
   /// Get all answers for a submission.
-  Future<List<SubmissionAnswerModel>> getSubmissionAnswers(String submissionId) async {
+  Future<List<SubmissionAnswerModel>> getSubmissionAnswers(
+      String submissionId) async {
     final snapshot = await _firestore
         .collection(AppConstants.colSubmissions)
         .doc(submissionId)

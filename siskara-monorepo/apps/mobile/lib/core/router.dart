@@ -38,17 +38,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (profile.isAdmin || (!profile.isKepala && !profile.isStaf)) {
         return '/unsupported';
       }
-      final isSignatureUpdate =
-          state.uri.queryParameters['update'] == 'true';
-      if ((!profile.hasSignature || !profile.hasPin) &&
-          !isSignatureUpdate) {
+      final isSignatureUpdate = state.uri.queryParameters['update'] == 'true';
+      if ((!profile.hasSignature || !profile.hasPin) && !isSignatureUpdate) {
         return state.matchedLocation == '/signature-setup'
             ? null
             : '/signature-setup';
       }
       if (isAuthRoute) return '/dashboard';
-      if (
-          state.matchedLocation == '/signature-setup' &&
+      if (state.matchedLocation == '/signature-setup' &&
           profile.hasSignature &&
           profile.hasPin &&
           !isSignatureUpdate) {
@@ -62,7 +59,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             '/profile',
             '/signature-setup',
             '/unsupported',
-          ].contains(state.matchedLocation)) {
+          ].contains(state.matchedLocation) &&
+          !state.matchedLocation.startsWith('/history/')) {
         return '/submission';
       }
       if (profile.isStaf &&
@@ -74,16 +72,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             '/signature-setup',
             '/unsupported',
           ].contains(state.matchedLocation) &&
-          !state.matchedLocation.startsWith('/review/')) {
+          !state.matchedLocation.startsWith('/review/') &&
+          !state.matchedLocation.startsWith('/history/')) {
         return '/review';
       }
       return null;
     },
     routes: [
-    GoRoute(
-      path: '/account-error',
-      builder: (context, state) => const AuthErrorScreen(),
-    ),
+      GoRoute(
+        path: '/account-error',
+        builder: (context, state) => const AuthErrorScreen(),
+      ),
       // ─── Auth Routes ─────────────────────────────────
       GoRoute(
         path: '/login',
@@ -109,7 +108,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ─── Kepala (Ship/Aircraft) Routes ───────────────
       GoRoute(
         path: '/submission',
-        builder: (context, state) => const SubmissionFormScreen(),
+        builder: (context, state) => SubmissionFormScreen(
+          draftId: state.uri.queryParameters['draftId'],
+        ),
       ),
 
       // ─── Staf BBKK Routes ───────────────────────────
@@ -121,6 +122,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/review/:submissionId',
         builder: (context, state) => ReviewDetailScreen(
           submissionId: state.pathParameters['submissionId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/history/:submissionId',
+        builder: (context, state) => ReviewDetailScreen(
+          submissionId: state.pathParameters['submissionId']!,
+          readOnly: true,
         ),
       ),
 

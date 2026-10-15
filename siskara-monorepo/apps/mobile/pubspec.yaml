@@ -1,7 +1,7 @@
-name: siskara_mobile
-description: "SISKARA - Sistem Skrining dan Pemeriksaan Kesehatan Kapal dan Pesawat Udara"
+name: arjuna_mobile
+description: "ARJUNA - Aplikasi Skrining dan Pemeriksaan Sanitasi Transportasi"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -68,3 +68,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/logo_bbkk.png
+    - assets/images/logo_arjuna.png

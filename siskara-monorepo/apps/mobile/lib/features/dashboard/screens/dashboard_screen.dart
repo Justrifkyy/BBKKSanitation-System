@@ -29,7 +29,7 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SISKARA'),
+        title: const Text(AppConstants.appName),
         actions: [
           IconButton(
             tooltip: 'Profil',
@@ -162,10 +162,9 @@ class _WelcomePanel extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(11),
                       ),
-                      child: const Icon(
-                        Icons.health_and_safety_outlined,
-                        color: Colors.white,
-                        size: 20,
+                      child: Image.asset(
+                        'assets/images/logo_arjuna.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(width: 9),
@@ -173,7 +172,7 @@ class _WelcomePanel extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'SISKARA',
+                          AppConstants.appName,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 11,

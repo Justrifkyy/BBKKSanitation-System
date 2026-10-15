@@ -59,9 +59,17 @@ class HistoryScreen extends ConsumerWidget {
                     for (final submission in list)
                       _HistoryCard(
                         submission: submission,
-                        onTap: isStaff
-                            ? () => context.go('/review/${submission.id}')
-                            : null,
+                        onTap: () {
+                          if (isStaff) {
+                            context.go('/review/${submission.id}');
+                          } else if (submission.isDraft) {
+                            context.go(
+                              '/submission?draftId=${submission.id}',
+                            );
+                          } else {
+                            context.go('/history/${submission.id}');
+                          }
+                        },
                       ),
                   ],
                 ),

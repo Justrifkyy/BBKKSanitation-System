@@ -53,7 +53,7 @@ class ErrorMessage {
     if (status >= 500) {
       return status == 503
           ? 'Layanan penyimpanan sedang tidak tersedia. Hubungi administrator atau coba kembali nanti.'
-          : 'Server SISKARA sedang mengalami gangguan (HTTP $status). Coba kembali beberapa saat lagi.';
+          : 'Server ARJUNA sedang mengalami gangguan (HTTP $status). Coba kembali beberapa saat lagi.';
     }
 
     return switch (status) {
@@ -84,7 +84,7 @@ class ErrorMessage {
         'too-many-requests' =>
           'Terlalu banyak percobaan. Tunggu beberapa saat lalu coba kembali.',
         'user-disabled' =>
-          'Akun ini dinonaktifkan. Hubungi administrator SISKARA.',
+          'Akun ini dinonaktifkan. Hubungi administrator ARJUNA.',
         'operation-not-allowed' =>
           'Metode autentikasi belum diaktifkan. Hubungi administrator.',
         'requires-recent-login' =>
@@ -120,7 +120,7 @@ class ErrorMessage {
       'unauthenticated' => 'Sesi Anda berakhir. Silakan masuk kembali.',
       'resource-exhausted' =>
         'Batas penggunaan layanan tercapai. Coba kembali nanti.',
-      _ => 'Layanan SISKARA mengalami kendala (${error.code}).',
+      _ => 'Layanan ARJUNA mengalami kendala (${error.code}).',
     };
   }
 

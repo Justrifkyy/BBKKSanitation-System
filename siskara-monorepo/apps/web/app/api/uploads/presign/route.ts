@@ -76,13 +76,6 @@ export async function POST(request: NextRequest) {
           { status: 404 },
         );
       }
-      if (userSnapshot.data()?.signature_url) {
-        return NextResponse.json(
-          { error: "Tanda tangan sudah disimpan dan tidak dapat diganti." },
-          { status: 409 },
-        );
-      }
-
       const key = `staging/signatures/${authResult.user.uid}/${randomUUID()}.${extension}`;
       return NextResponse.json({
         upload_url: await createUploadUrl(key, {

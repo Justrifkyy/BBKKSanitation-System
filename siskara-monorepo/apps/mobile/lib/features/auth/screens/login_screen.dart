@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants.dart';
 import '../../../core/error_message.dart';
 import '../../../core/theme.dart';
 import '../../../state/auth_state.dart';
@@ -69,15 +70,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo & Title
-                  const Icon(
-                    Icons.health_and_safety,
-                    size: 80,
-                    color: SiskaraTheme.primaryBlue,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo_bbkk.png',
+                        width: 62,
+                        height: 72,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 18),
+                      Image.asset(
+                        'assets/images/logo_arjuna.png',
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.contain,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: SiskaraTheme.spacingMd),
                   Text(
-                    'SISKARA',
+                    AppConstants.appName,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           fontWeight: FontWeight.bold,
@@ -86,7 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: SiskaraTheme.spacingSm),
                   Text(
-                    'Sistem Skrining & Pemeriksaan\nKesehatan Kapal dan Pesawat Udara',
+                    'Skrining Sanitasi Kapal dan Pesawat Udara',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: SiskaraTheme.textSecondary,

@@ -75,11 +75,11 @@ class ApiService {
       rethrow;
     } on SocketException {
       throw const ApiException(
-        'Tidak dapat terhubung ke server SISKARA. Periksa koneksi internet.',
+        'Tidak dapat terhubung ke server ARJUNA. Periksa koneksi internet.',
       );
     } on TimeoutException {
       throw const ApiException(
-        'Server SISKARA tidak merespons. Silakan coba lagi.',
+        'Server ARJUNA tidak merespons. Silakan coba lagi.',
       );
     } on HttpException {
       throw const ApiException(

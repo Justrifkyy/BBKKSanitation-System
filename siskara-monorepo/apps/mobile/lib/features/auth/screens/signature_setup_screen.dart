@@ -68,6 +68,7 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
     }
 
     setState(() => _isSaving = true);
+    var saveStage = 'menyiapkan tanda tangan';
     try {
       final authService = ref.read(authServiceProvider);
       final storageService = StorageService();
@@ -79,15 +80,20 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
           throw StateError(
               'Tanda tangan tidak dapat diproses. Coba gambar ulang.');
         }
+        saveStage = 'mengunggah tanda tangan';
         final signaturePath = await storageService.uploadSignatureBytes(
           user.id,
           bytes,
           contentType: _uploadedSignatureContentType ?? 'image/png',
         );
+        saveStage = 'menyimpan tanda tangan pada profil';
         await authService.updateSignature(user.id, signaturePath);
       }
 
-      if (needsPin) await authService.setPin(_pinController.text);
+      if (needsPin) {
+        saveStage = 'menyimpan PIN konfirmasi';
+        await authService.setPin(_pinController.text);
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -97,7 +103,7 @@ class _SignatureSetupScreenState extends ConsumerState<SignatureSetupScreen> {
     } catch (error) {
       if (mounted) {
         _showMessage(
-          'Tidak dapat menyimpan pengaturan: ${ErrorMessage.from(error)}',
+          'Gagal saat $saveStage: ${ErrorMessage.from(error)}',
         );
       }
     } finally {
