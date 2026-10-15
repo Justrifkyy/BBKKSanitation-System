@@ -8,6 +8,8 @@ import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../core/widgets/interactive_photo_viewer.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/certificate_service.dart';
 import '../../../services/firestore_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../state/auth_state.dart';
@@ -29,9 +31,44 @@ class ReviewDetailScreen extends ConsumerStatefulWidget {
 class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   late Future<_ReviewData?> _reviewFuture;
   bool _isSavingDecision = false;
+  bool _isDownloadingCertificate = false;
   final Map<String, String> _evaluations = {}; // answerId -> 'layak' | 'tidak_layak'
   final Map<String, TextEditingController> _reasonControllers = {};
   bool _hasInitializedEvaluations = false;
+
+  Future<void> _downloadCertificate(_ReviewData review) async {
+    setState(() => _isDownloadingCertificate = true);
+    try {
+      final file = await CertificateService().downloadAndOpenCertificate(
+        submission: review.submission,
+        answers: review.answers,
+        items: review.items,
+        pengisiNama: review.pengisiNama,
+        verifikatorNama: review.verifikatorNama,
+        verifiedAt: review.submission.updatedAt,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Surat resmi berhasil diunduh & dibuka:\n${file.path.split('/').last}',
+          ),
+          backgroundColor: SiskaraTheme.success,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal membuat surat: ${ErrorMessage.from(error)}'),
+          backgroundColor: SiskaraTheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isDownloadingCertificate = false);
+    }
+  }
 
   @override
   void initState() {
@@ -155,17 +192,30 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
       ref.invalidate(pendingSubmissionsProvider);
       ref.invalidate(userSubmissionsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            decision == 'approve'
-                ? 'Pengajuan disetujui. Dokumen resmi sedang disiapkan.'
-                : 'Pengajuan ditolak dan catatan telah disimpan.',
+      if (decision == 'approve') {
+        setState(() {
+          _reviewFuture = ref
+              .read(firestoreServiceProvider)
+              .loadReviewData(widget.submissionId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Pengajuan disetujui (ACC)! Surat Kelayakan Sanitasi resmi telah terbit.',
+            ),
+            backgroundColor: SiskaraTheme.success,
+            duration: Duration(seconds: 4),
           ),
-          backgroundColor: SiskaraTheme.success,
-        ),
-      );
-      context.go('/review');
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pengajuan ditolak dan catatan telah disimpan.'),
+            backgroundColor: SiskaraTheme.warning,
+          ),
+        );
+        context.go('/review');
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -231,6 +281,16 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
             children: [
               _SubmissionHeader(submission: review.submission),
               const SizedBox(height: 14),
+
+              // Official Certificate Card when status is final
+              if (review.submission.status == 'final') ...[
+                _CertificateCard(
+                  review: review,
+                  onDownload: () => _downloadCertificate(review),
+                  isDownloading: _isDownloadingCertificate,
+                ),
+                const SizedBox(height: 14),
+              ],
 
               // Staff Evaluation Guidance Banner
               if (canEvaluate) ...[
@@ -382,7 +442,50 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
             future: _reviewFuture,
             builder: (context, snapshot) {
               final review = snapshot.data;
-              if (widget.readOnly || !isStaff || review == null) {
+              if (review == null) return const SizedBox.shrink();
+
+              // When finalized (ACC), anyone viewing can download the certificate
+              if (review.submission.status == 'final') {
+                return SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: const Border(
+                        top: BorderSide(color: SiskaraTheme.divider),
+                      ),
+                    ),
+                    child: FilledButton.icon(
+                      onPressed: _isDownloadingCertificate
+                          ? null
+                          : () => _downloadCertificate(review),
+                      icon: _isDownloadingCertificate
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.picture_as_pdf_outlined, size: 20),
+                      label: Text(
+                        _isDownloadingCertificate
+                            ? 'Menyiapkan Surat PDF...'
+                            : 'Unduh Surat Kelayakan Sanitasi (A4)',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F766E),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              if (widget.readOnly || !isStaff) {
                 return const SizedBox.shrink();
               }
               if (review.submission.status != 'menunggu_verifikasi_staf') {
@@ -469,11 +572,29 @@ extension on FirestoreService {
         ),
       ),
     );
+
+    String? pengisiNama;
+    String? verifikatorNama;
+    try {
+      final auth = AuthService();
+      if (submission.pengisiId.isNotEmpty) {
+        final p = await auth.getUserProfile(submission.pengisiId);
+        pengisiNama = p?.nama;
+      }
+      if (submission.verifikatorId != null &&
+          submission.verifikatorId!.isNotEmpty) {
+        final v = await auth.getUserProfile(submission.verifikatorId!);
+        verifikatorNama = v?.nama;
+      }
+    } catch (_) {}
+
     return _ReviewData(
       submission: submission,
       answers: answers,
       items: {for (final item in items) item.id: item},
       media: Map.fromEntries(mediaEntries),
+      pengisiNama: pengisiNama,
+      verifikatorNama: verifikatorNama,
     );
   }
 }
@@ -484,11 +605,15 @@ class _ReviewData {
     required this.answers,
     required this.items,
     required this.media,
+    this.pengisiNama,
+    this.verifikatorNama,
   });
   final SubmissionModel submission;
   final List<SubmissionAnswerModel> answers;
   final Map<String, ChecklistTemplateItemModel> items;
   final Map<String, List<SubmissionAnswerMediaModel>> media;
+  final String? pengisiNama;
+  final String? verifikatorNama;
 }
 
 class _ReviewDecision {
@@ -1390,3 +1515,197 @@ String _answerLabel(String value) {
   };
   return labels[value] ?? _displayLabel(value);
 }
+
+class _CertificateCard extends StatelessWidget {
+  const _CertificateCard({
+    required this.review,
+    required this.onDownload,
+    required this.isDownloading,
+  });
+
+  final _ReviewData review;
+  final VoidCallback onDownload;
+  final bool isDownloading;
+
+  @override
+  Widget build(BuildContext context) {
+    final isKapal = review.submission.isKapal;
+    final idShort = review.submission.id.length >= 8
+        ? review.submission.id.substring(0, 8).toUpperCase()
+        : review.submission.id.toUpperCase();
+    final docNumber = isKapal
+        ? 'BBKK.MKS/PHQC/$idShort/${DateTime.now().year}'
+        : 'BBKK.MKS/ASIC/$idShort/${DateTime.now().year}';
+    final namaSarana = isKapal
+        ? (review.submission.dataUmum['nama_kapal']?.toString() ?? 'KAPAL LAUT')
+        : (review.submission.dataUmum['nomor_penerbangan']?.toString() ??
+            'PESAWAT UDARA');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF22C55E), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.verified_rounded,
+                  color: Color(0xFF16A34A),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16A34A),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'SURAT RESMI TERBIT • FORMAT A4',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isKapal
+                          ? 'Sertifikat Karantina Kesehatan Kapal (PHQC)'
+                          : 'Surat Sanitasi Pesawat Udara (ASIC)',
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF14532D),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFBBF7D0)),
+          const SizedBox(height: 12),
+          _buildInfoRow('Nomor Dokumen', docNumber),
+          const SizedBox(height: 5),
+          _buildInfoRow('Sarana Transportasi', namaSarana),
+          const SizedBox(height: 5),
+          _buildInfoRow(
+            isKapal ? 'Nahkoda / Pemohon' : 'Pilot in Command',
+            review.pengisiNama ?? 'Deklaran Pemohon',
+          ),
+          const SizedBox(height: 5),
+          _buildInfoRow(
+            'Validator BBKK',
+            review.verifikatorNama ?? 'Petugas Validasi BBKK Makassar',
+          ),
+          const SizedBox(height: 5),
+          _buildInfoRow(
+            'Hasil Penilaian',
+            'MEMENUHI PERSYARATAN (LAIK OPERASIONAL)',
+            isHighlight: true,
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: isDownloading ? null : onDownload,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F766E),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              icon: isDownloading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.download_rounded, size: 20),
+              label: Text(
+                isDownloading
+                    ? 'Menyiapkan & Mengunduh PDF...'
+                    : 'Unduh Surat Kelayakan Sanitasi (A4 PDF)',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Center(
+            child: Text(
+              'Dokumen A4 tersimpan di folder Download & dapat langsung dibuka/dicetak.',
+              style: TextStyle(
+                fontSize: 10,
+                color: Color(0xFF166534),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, {bool isHighlight = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 130,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF374151),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Text(': ', style: TextStyle(fontSize: 11, color: Color(0xFF374151))),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isHighlight ? FontWeight.bold : FontWeight.w600,
+              color: isHighlight ? const Color(0xFF15803D) : const Color(0xFF111827),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+

@@ -45,6 +45,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
   String? _draftId;
   Future<_DraftFormData>? _draftFuture;
   bool _isSubmitting = false;
+  String _submittingStatus = '';
   bool _confirmsAccuracy = false;
   Timer? _autoSaveDebounce;
   bool _hasRestoredLocalDraft = false;
@@ -541,9 +542,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
       final media = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 75,
-        maxWidth: 1920,
-        maxHeight: 1920,
+        imageQuality: 70,
+        maxWidth: 1280,
+        maxHeight: 1280,
       );
       if (media == null) return;
 
@@ -656,36 +657,52 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         isNew: isNew,
       );
 
+      stage = 'menyimpan dokumentasi checklist';
+      if (mounted) setState(() => _submittingStatus = 'Menyimpan draft checklist...');
+      await Future.wait(
+        items.map((item) {
+          final reason = _controller('reason_${item.id}').text.trim();
+          return firestore.saveAnswerForItem(
+            submissionId: submissionId,
+            itemId: item.id,
+            answer: {
+              'submission_id': submissionId,
+              'template_item_id': item.id,
+              'kategori': item.kategori,
+              'label': item.label,
+              'nilai_jawaban': 'dilaporkan',
+              'alasan': reason.isEmpty ? null : reason,
+              'status_gagal': false,
+            },
+          );
+        }),
+      );
+
+      final draftUploads = <Future<void>>[];
       for (final item in items) {
-        final reason = _controller('reason_${item.id}').text.trim();
-        stage = 'menyimpan dokumentasi untuk bagian ${item.label}';
-        await firestore.saveAnswerForItem(
-          submissionId: submissionId,
-          itemId: item.id,
-          answer: {
-            'submission_id': submissionId,
-            'template_item_id': item.id,
-            'kategori': item.kategori,
-            'label': item.label,
-            'nilai_jawaban': 'dilaporkan',
-            'alasan': reason.isEmpty ? null : reason,
-            'status_gagal': false,
-          },
-        );
         final evidence = _evidence[item.id];
         final position = _positions[item.id];
         if (evidence != null && position != null) {
-          stage = 'mengunggah foto untuk bagian ${item.label}';
-          await _uploadEvidence(
-            submissionId: submissionId,
-            item: item,
-            evidence: evidence,
-            position: position,
-            timestamp: _captureTimes[item.id] ?? now,
-            storage: storage,
-            firestore: firestore,
+          draftUploads.add(
+            _uploadEvidenceDirect(
+              submissionId: submissionId,
+              item: item,
+              evidence: evidence,
+              position: position,
+              timestamp: _captureTimes[item.id] ?? now,
+              storage: storage,
+            ),
           );
         }
+      }
+      if (draftUploads.isNotEmpty) {
+        stage = 'mengunggah foto bukti';
+        if (mounted) {
+          setState(
+            () => _submittingStatus = 'Mengunggah ${draftUploads.length} foto bukti...',
+          );
+        }
+        await Future.wait(draftUploads);
       }
       await _persistLocalDraft();
       ref.invalidate(userSubmissionsProvider);
@@ -701,7 +718,12 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _submittingStatus = '';
+        });
+      }
     }
   }
 
@@ -714,21 +736,20 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 : _controller(field.name).text.trim(),
       };
 
-  Future<void> _uploadEvidence({
+  Future<void> _uploadEvidenceDirect({
     required String submissionId,
     required ChecklistTemplateItemModel item,
     required XFile evidence,
     required Position position,
     required DateTime timestamp,
     required StorageService storage,
-    required FirestoreService firestore,
   }) async {
     final extension = evidence.path.split('.').last.toLowerCase();
     final fileLength = await File(evidence.path).length();
     const maxSize = AppConstants.maxPhotoSizeKb * 1024;
     if (fileLength > maxSize) {
       throw StateError(
-        'Ukuran foto maksimal ${AppConstants.maxPhotoSizeKb} KB.',
+        'Ukuran foto pada ${item.label} maksimal ${AppConstants.maxPhotoSizeKb} KB.',
       );
     }
     final mediaType = extension == 'jpg' || extension == 'jpeg'
@@ -747,16 +768,6 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       longitude: position.longitude,
       timestamp: timestamp,
     );
-    final media = await firestore.getAnswerMedia(submissionId, item.id);
-    media.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    if (media.isNotEmpty && mounted) {
-      setState(() {
-        _savedEvidence[item.id] = media.first;
-        _evidence.remove(item.id);
-        _positions.remove(item.id);
-        _captureTimes.remove(item.id);
-      });
-    }
   }
 
   Future<void> _submit({
@@ -815,7 +826,10 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     final pin = await _requestPin();
     if (pin == null || !mounted) return;
 
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _submittingStatus = 'Menyimpan data umum...';
+    });
     var submissionStage = 'menyimpan data umum';
     try {
       final firestore = ref.read(firestoreServiceProvider);
@@ -840,41 +854,60 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         isNew: isNew,
       );
 
-      for (final item in items) {
-        submissionStage = 'menyimpan dokumentasi area ${item.label}';
-        final note = _controller('reason_${item.id}').text.trim();
-        await firestore.saveAnswerForItem(
-          submissionId: submissionId,
-          itemId: item.id,
-          answer: {
-            'submission_id': submissionId,
-            'template_item_id': item.id,
-            'kategori': item.kategori,
-            'label': item.label,
-            'nilai_jawaban': 'dilaporkan',
-            'alasan': note.isNotEmpty ? note : null,
-            'status_gagal': false,
-          },
-        );
+      submissionStage = 'menyimpan data checklist';
+      if (mounted) setState(() => _submittingStatus = 'Menyimpan jawaban checklist...');
+      await Future.wait(
+        items.map((item) {
+          final note = _controller('reason_${item.id}').text.trim();
+          return firestore.saveAnswerForItem(
+            submissionId: submissionId,
+            itemId: item.id,
+            answer: {
+              'submission_id': submissionId,
+              'template_item_id': item.id,
+              'kategori': item.kategori,
+              'label': item.label,
+              'nilai_jawaban': 'dilaporkan',
+              'alasan': note.isNotEmpty ? note : null,
+              'status_gagal': false,
+            },
+          );
+        }),
+      );
 
+      final uploadFutures = <Future<void>>[];
+      for (final item in items) {
         final evidence = _evidence[item.id];
         final position = _positions[item.id];
-
         if (evidence != null && position != null) {
-          submissionStage = 'mengunggah foto untuk bagian ${item.label}';
-          await _uploadEvidence(
-            submissionId: submissionId,
-            item: item,
-            evidence: evidence,
-            position: position,
-            timestamp: _captureTimes[item.id] ?? now,
-            storage: storage,
-            firestore: firestore,
+          uploadFutures.add(
+            _uploadEvidenceDirect(
+              submissionId: submissionId,
+              item: item,
+              evidence: evidence,
+              position: position,
+              timestamp: _captureTimes[item.id] ?? now,
+              storage: storage,
+            ),
           );
         }
       }
 
+      if (uploadFutures.isNotEmpty) {
+        submissionStage = 'mengunggah ${uploadFutures.length} foto dokumentasi';
+        if (mounted) {
+          setState(
+            () => _submittingStatus =
+                'Mengunggah ${uploadFutures.length} foto bukti...',
+          );
+        }
+        await Future.wait(uploadFutures);
+      }
+
       submissionStage = 'mengesahkan deklarasi dengan PIN';
+      if (mounted) {
+        setState(() => _submittingStatus = 'Mengesahkan deklarasi dengan PIN...');
+      }
       final status = await ref.read(authServiceProvider).signSubmission(
             submissionId: submissionId,
             pin: pin,
@@ -1142,19 +1175,31 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                         ? null
                         : () => _submit(template: template, items: items),
                     child: _isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  _submittingStatus.isNotEmpty
+                                      ? _submittingStatus
+                                      : 'Memproses...',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
                           )
-                        : Text(
-                            _isSubmitting
-                                ? 'Mengirim deklarasi...'
-                                : 'Tanda tangani & kirim',
-                          ),
+                        : const Text('Tanda tangani & kirim'),
                   ),
                 ),
                 const SizedBox(height: 10),
