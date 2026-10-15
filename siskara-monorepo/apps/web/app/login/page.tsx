@@ -86,8 +86,8 @@ export default function LoginPage() {
               <Image
                 src="/LOGOBBKK.png"
                 alt="Logo Balai Besar Kekarantinaan Kesehatan Makassar"
-                width={44}
-                height={50}
+                width={56}
+                height={64}
                 priority
                 className="arjuna-logo-bbkk"
               />
@@ -95,8 +95,8 @@ export default function LoginPage() {
               <Image
                 src="/LOGOSISTEM.png"
                 alt="Logo ARJUNA"
-                width={48}
-                height={48}
+                width={62}
+                height={62}
                 priority
                 className="arjuna-logo-system"
               />

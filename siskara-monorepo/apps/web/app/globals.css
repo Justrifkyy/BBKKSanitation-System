@@ -110,7 +110,7 @@ select:focus-visible {
 }
 
 /* ==========================================================================
-   ARJUNA LOGIN PORTAL (Ultra-Modern Glassmorphic & Transparent Logos)
+   ARJUNA LOGIN PORTAL (Ultra-Modern Glassmorphic - 125% Scale Ratio)
    ========================================================================== */
 
 .arjuna-login {
@@ -129,7 +129,7 @@ select:focus-visible {
     radial-gradient(circle at 50% 50%, rgba(9, 45, 52, 0.5) 0%, transparent 100%),
     linear-gradient(145deg, #051317 0%, #082128 45%, #06191f 100%);
   color: #e4f7f4;
-  padding: clamp(8px, 1.8vh, 18px) 24px;
+  padding: clamp(12px, 2.2vh, 24px) 32px;
 }
 
 /* Subtle Animated Ambient Orbs */
@@ -145,24 +145,24 @@ select:focus-visible {
 .arjuna-ambient--1 {
   top: -120px;
   left: -80px;
-  width: 480px;
-  height: 480px;
+  width: 520px;
+  height: 520px;
   background: radial-gradient(circle, rgba(29, 209, 161, 0.22) 0%, transparent 70%);
 }
 
 .arjuna-ambient--2 {
   bottom: -150px;
   right: -100px;
-  width: 560px;
-  height: 560px;
+  width: 600px;
+  height: 600px;
   background: radial-gradient(circle, rgba(18, 140, 130, 0.24) 0%, transparent 70%);
 }
 
 .arjuna-ambient--3 {
   top: 40%;
   left: 45%;
-  width: 380px;
-  height: 380px;
+  width: 420px;
+  height: 420px;
   background: radial-gradient(circle, rgba(214, 155, 53, 0.08) 0%, transparent 70%);
 }
 
@@ -173,20 +173,20 @@ select:focus-visible {
   background-image:
     linear-gradient(rgba(45, 212, 191, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(45, 212, 191, 0.035) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background-size: 50px 50px;
   mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 40%, transparent 95%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Main Container - Exact Scale from Screenshot */
+/* Main Container - Scaled to 125% Proportion */
 .arjuna-login__container {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(360px, 1.15fr) minmax(330px, 0.85fr);
-  gap: clamp(16px, 2.5vw, 36px);
-  max-width: 1040px;
+  grid-template-columns: minmax(420px, 1.22fr) minmax(380px, 0.98fr);
+  gap: clamp(24px, 3.5vw, 52px);
+  max-width: 1240px;
   width: 100%;
   align-items: center;
   margin: 0 auto;
@@ -196,20 +196,20 @@ select:focus-visible {
 .arjuna-hero {
   display: flex;
   flex-direction: column;
-  gap: clamp(8px, 1.3vh, 13px);
+  gap: clamp(10px, 1.6vh, 16px);
   padding: 2px 0;
 }
 
 .arjuna-hero__brand {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 9px;
 }
 
 .arjuna-hero__logos {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 15px;
 }
 
 /* Transparent Logos with Glow */
@@ -217,7 +217,7 @@ select:focus-visible {
 .arjuna-logo-system {
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 10px rgba(45, 212, 191, 0.28));
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 12px rgba(45, 212, 191, 0.32));
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -228,43 +228,43 @@ select:focus-visible {
 
 .arjuna-hero__logos-divider {
   width: 2px;
-  height: 32px;
+  height: 40px;
   background: linear-gradient(to bottom, transparent, rgba(45, 212, 191, 0.55), transparent);
 }
 
 .arjuna-hero__titles {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .arjuna-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   width: fit-content;
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: rgba(45, 212, 191, 0.08);
   border: 1px solid rgba(45, 212, 191, 0.22);
   border-radius: 999px;
   color: #7ee7d7;
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .arjuna-badge__dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #2dd4bf;
   box-shadow: 0 0 6px #2dd4bf;
 }
 
 .arjuna-title {
-  margin: 1px 0 0;
-  font-size: clamp(22px, 2.2vw, 28px);
+  margin: 2px 0 0;
+  font-size: clamp(28px, 2.8vw, 36px);
   font-weight: 850;
   letter-spacing: 0.08em;
   line-height: 1.05;
@@ -276,7 +276,7 @@ select:focus-visible {
 .arjuna-subtitle {
   margin: 0;
   color: rgba(220, 245, 241, 0.72);
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -284,12 +284,12 @@ select:focus-visible {
 .arjuna-hero__main {
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 1vh, 9px);
+  gap: clamp(8px, 1.2vh, 12px);
 }
 
 .arjuna-tagline {
   margin: 0;
-  font-size: clamp(16px, 1.5vw, 19px);
+  font-size: clamp(19px, 1.8vw, 24px);
   font-weight: 700;
   line-height: 1.25;
   color: #ffffff;
@@ -304,25 +304,25 @@ select:focus-visible {
 
 .arjuna-description {
   margin: 0;
-  max-width: 460px;
+  max-width: 540px;
   color: rgba(212, 241, 237, 0.74);
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .arjuna-features {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-top: 1px;
+  gap: 7px;
+  margin-top: 2px;
 }
 
 .arjuna-feature-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 11px;
-  border-radius: 9px;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: 11px;
   background: rgba(10, 36, 44, 0.45);
   border: 1px solid rgba(130, 219, 206, 0.12);
   backdrop-filter: blur(14px);
@@ -339,57 +339,57 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: rgba(45, 212, 191, 0.12);
   color: #2dd4bf;
   flex-shrink: 0;
 }
 
 .arjuna-feature-item__icon svg {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 
 .arjuna-feature-item__content {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .arjuna-feature-item__content strong {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 680;
   color: #f1faf8;
 }
 
 .arjuna-feature-item__content span {
-  font-size: 9.5px;
+  font-size: 11px;
   color: rgba(212, 239, 235, 0.62);
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .arjuna-hero__footer {
-  margin-top: 1px;
+  margin-top: 3px;
 }
 
 .arjuna-server-status {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2.5px 9px;
+  gap: 7px;
+  padding: 3.5px 12px;
   border-radius: 999px;
   background: rgba(8, 28, 34, 0.6);
   border: 1px solid rgba(45, 212, 191, 0.16);
   color: rgba(220, 245, 241, 0.68);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 550;
 }
 
 .arjuna-status-beacon {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #10b981;
   box-shadow: 0 0 8px #10b981;
@@ -411,48 +411,48 @@ select:focus-visible {
 
 .arjuna-card {
   width: 100%;
-  max-width: 360px;
-  padding: clamp(14px, 2vh, 18px) 20px;
+  max-width: 440px;
+  padding: clamp(18px, 2.4vh, 24px) 24px;
   background: rgba(11, 34, 42, 0.72);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   border: 1px solid rgba(130, 219, 206, 0.22);
-  border-radius: 18px;
+  border-radius: 20px;
   box-shadow:
     0 25px 55px -15px rgba(0, 0, 0, 0.75),
     0 0 35px rgba(20, 150, 135, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
   display: flex;
   flex-direction: column;
-  gap: clamp(8px, 1.2vh, 11px);
+  gap: clamp(10px, 1.4vh, 14px);
 }
 
 .arjuna-card__header {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .arjuna-card__badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   width: fit-content;
   color: #2dd4bf;
-  font-size: 8px;
+  font-size: 9.5px;
   font-weight: 750;
   letter-spacing: 0.1em;
   margin-bottom: 1px;
 }
 
 .arjuna-card__badge svg {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 
 .arjuna-card__title {
   margin: 0;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 750;
   letter-spacing: -0.03em;
   color: #ffffff;
@@ -461,7 +461,7 @@ select:focus-visible {
 .arjuna-card__subtitle {
   margin: 0;
   color: rgba(212, 239, 235, 0.65);
-  font-size: 10.5px;
+  font-size: 12.5px;
   line-height: 1.35;
 }
 
@@ -469,18 +469,18 @@ select:focus-visible {
 .arjuna-form {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 11px;
 }
 
 .arjuna-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .arjuna-field label {
   color: #c9ede7;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.02em;
 }
@@ -495,11 +495,11 @@ select:focus-visible {
   position: relative;
   display: flex;
   align-items: center;
-  height: 38px;
-  padding: 0 10px;
+  height: 44px;
+  padding: 0 12px;
   background: rgba(6, 20, 26, 0.68);
   border: 1px solid rgba(130, 219, 206, 0.2);
-  border-radius: 9px;
+  border-radius: 10px;
   transition: all 0.2s ease;
 }
 
@@ -514,13 +514,13 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   color: #5dafa2;
-  margin-right: 9px;
+  margin-right: 10px;
   flex-shrink: 0;
 }
 
 .arjuna-input-icon svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
 }
 
 .arjuna-input-box input {
@@ -530,7 +530,7 @@ select:focus-visible {
   background: transparent;
   outline: none;
   color: #f2fbf9;
-  font-size: 11.5px;
+  font-size: 13.5px;
   font-weight: 500;
 }
 
@@ -543,7 +543,7 @@ select:focus-visible {
   background: transparent;
   color: #7ee7d7;
   cursor: pointer;
-  padding: 4px;
+  padding: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -555,21 +555,21 @@ select:focus-visible {
 }
 
 .arjuna-toggle-pwd svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
 }
 
 /* Error Alert */
 .arjuna-error-box {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 9px;
   background: rgba(220, 38, 38, 0.12);
   border: 1px solid rgba(248, 113, 113, 0.35);
   color: #fca5a5;
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1.4;
   animation: shake 0.3s ease;
 }
@@ -581,8 +581,8 @@ select:focus-visible {
 }
 
 .arjuna-error-box svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
   color: #ef4444;
   margin-top: 1px;
@@ -593,15 +593,15 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 38px;
+  gap: 9px;
+  height: 44px;
   width: 100%;
-  margin-top: 1px;
+  margin-top: 2px;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 9px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #0e786e 0%, #139c8d 50%, #1dcba7 100%);
   color: #ffffff;
-  font-size: 11.5px;
+  font-size: 13.5px;
   font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
@@ -625,8 +625,8 @@ select:focus-visible {
 }
 
 .arjuna-btn-submit svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   transition: transform 0.2s ease;
 }
 
@@ -635,8 +635,8 @@ select:focus-visible {
 }
 
 .arjuna-spinner {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-top-color: #ffffff;
   border-radius: 50%;
@@ -647,19 +647,19 @@ select:focus-visible {
 .arjuna-role-notice {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: 9px;
+  gap: 9px;
+  padding: 8px 12px;
+  border-radius: 10px;
   background: rgba(14, 45, 54, 0.5);
   border: 1px solid rgba(130, 219, 206, 0.12);
   color: rgba(212, 239, 235, 0.7);
-  font-size: 9.5px;
+  font-size: 11px;
   line-height: 1.4;
 }
 
 .arjuna-role-notice svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   color: #2dd4bf;
   flex-shrink: 0;
   margin-top: 1px;
@@ -679,18 +679,29 @@ select:focus-visible {
 .arjuna-card__footer {
   text-align: center;
   border-top: 1px solid rgba(130, 219, 206, 0.1);
-  padding-top: 6px;
-  margin-top: -2px;
+  padding-top: 7px;
+  margin-top: -1px;
 }
 
 .arjuna-card__footer p {
   margin: 0;
-  font-size: 9px;
+  font-size: 10px;
   color: rgba(190, 225, 220, 0.5);
 }
 
-/* ─── Responsive Breakdown ─── */
-@media (max-width: 900px), (max-height: 520px) {
+/* Short vertical height: keep 2-column layout, allow vertical scroll */
+@media (max-height: 760px) {
+  .arjuna-login {
+    height: auto;
+    max-height: none;
+    min-height: 100vh;
+    overflow-y: auto;
+    padding: 24px 32px;
+  }
+}
+
+/* Tablet & Mobile: 1-column layout */
+@media (max-width: 900px) {
   .arjuna-login {
     height: auto;
     max-height: none;
