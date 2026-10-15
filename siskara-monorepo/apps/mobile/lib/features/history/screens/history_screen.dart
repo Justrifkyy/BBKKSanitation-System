@@ -219,30 +219,73 @@ class _HistoryCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 7),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: SiskaraTheme.statusColor(submission.status)
-                            .withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        SiskaraTheme.statusLabel(submission.status),
-                        style: TextStyle(
-                          color: SiskaraTheme.statusColor(submission.status),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
+                    if (submission.isDraft)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFF0D9488).withValues(alpha: 0.35),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.edit_note_rounded,
+                              size: 14,
+                              color: Color(0xFF0D9488),
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Draf • Ketuk untuk lanjutkan',
+                              style: TextStyle(
+                                color: Color(0xFF0D9488),
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: SiskaraTheme.statusColor(submission.status)
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          SiskaraTheme.statusLabel(submission.status),
+                          style: TextStyle(
+                            color: SiskaraTheme.statusColor(submission.status),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
               if (onTap != null)
-                const Icon(Icons.chevron_right, color: SiskaraTheme.textSecondary),
+                Icon(
+                  submission.isDraft
+                      ? Icons.edit_outlined
+                      : Icons.chevron_right,
+                  color: submission.isDraft
+                      ? const Color(0xFF0D9488)
+                      : SiskaraTheme.textSecondary,
+                  size: submission.isDraft ? 20 : 24,
+                ),
             ],
           ),
         ),

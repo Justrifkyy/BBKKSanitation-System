@@ -15,20 +15,32 @@ export interface R2ObjectMetadata {
 
 let client: S3Client | undefined;
 
+function sanitizeEnv(val: string | undefined): string | undefined {
+  if (!val) return undefined;
+  let cleaned = val.trim();
+  if (
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith("'") && cleaned.endsWith("'"))
+  ) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  return cleaned;
+}
+
 export function isR2Configured(): boolean {
   return Boolean(
-    process.env.R2_ACCOUNT_ID &&
-      process.env.R2_BUCKET_NAME &&
-      process.env.R2_ACCESS_KEY_ID &&
-      process.env.R2_SECRET_ACCESS_KEY,
+    sanitizeEnv(process.env.R2_ACCOUNT_ID) &&
+      sanitizeEnv(process.env.R2_BUCKET_NAME) &&
+      sanitizeEnv(process.env.R2_ACCESS_KEY_ID) &&
+      sanitizeEnv(process.env.R2_SECRET_ACCESS_KEY),
   );
 }
 
 function getR2Config() {
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const bucket = process.env.R2_BUCKET_NAME;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const accountId = sanitizeEnv(process.env.R2_ACCOUNT_ID);
+  const bucket = sanitizeEnv(process.env.R2_BUCKET_NAME);
+  const accessKeyId = sanitizeEnv(process.env.R2_ACCESS_KEY_ID);
+  const secretAccessKey = sanitizeEnv(process.env.R2_SECRET_ACCESS_KEY);
 
   if (!accountId || !bucket || !accessKeyId || !secretAccessKey) {
     throw new Error(

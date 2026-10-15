@@ -65,30 +65,19 @@ class FirestoreService {
 
   Future<void> createSubmissionWithId(
     String submissionId,
-    SubmissionModel submission,
-  ) async {
+    SubmissionModel submission, {
+    bool isNew = true,
+  }) async {
     final submissionRef =
         _firestore.collection(AppConstants.colSubmissions).doc(submissionId);
-    await _firestore.runTransaction((transaction) async {
-      final existing = await transaction.get(submissionRef);
-      if (!existing.exists) {
-        transaction.set(submissionRef, submission.toMap());
-        return;
-      }
-
-      final data = existing.data();
-      if (data?['pengisi_id'] != submission.pengisiId ||
-          data?['status'] != AppConstants.statusDraft) {
-        throw StateError(
-          'Pengajuan ini sudah terkirim atau tidak dapat dilanjutkan. '
-          'Periksa halaman riwayat sebelum membuat pengajuan baru.',
-        );
-      }
-      transaction.update(submissionRef, {
+    if (isNew) {
+      await submissionRef.set(submission.toMap());
+    } else {
+      await submissionRef.update({
         'data_umum': submission.dataUmum,
         'updated_at': FieldValue.serverTimestamp(),
       });
-    });
+    }
   }
 
   String newSubmissionId() =>

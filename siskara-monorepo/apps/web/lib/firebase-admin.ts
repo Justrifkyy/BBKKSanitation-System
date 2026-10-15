@@ -2,10 +2,28 @@ import { initializeApp, getApps, getApp, cert, type ServiceAccount } from 'fireb
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
+function sanitizeEnv(val: string | undefined): string | undefined {
+  if (!val) return undefined;
+  let cleaned = val.trim();
+  if (
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith("'") && cleaned.endsWith("'"))
+  ) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  return cleaned;
+}
+
+function sanitizePrivateKey(key: string | undefined): string | undefined {
+  const cleaned = sanitizeEnv(key);
+  if (!cleaned) return undefined;
+  return cleaned.replace(/\\n/g, '\n');
+}
+
 const serviceAccount: ServiceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  projectId: sanitizeEnv(process.env.FIREBASE_PROJECT_ID),
+  clientEmail: sanitizeEnv(process.env.FIREBASE_CLIENT_EMAIL),
+  privateKey: sanitizePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
 };
 
 // Initialize Firebase Admin (singleton)
@@ -13,12 +31,13 @@ const adminApp =
   getApps().length === 0
     ? initializeApp({
       credential: cert(serviceAccount),
-      storageBucket: `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`,
+      storageBucket: `${serviceAccount.projectId}.firebasestorage.app`,
     })
     : getApp();
 
 export const adminAuth = getAuth(adminApp);
 export const adminDb = getFirestore(
   adminApp,
-  process.env.FIRESTORE_DATABASE_ID || 'bbkkmakassar',
+  sanitizeEnv(process.env.FIRESTORE_DATABASE_ID) || 'bbkkmakassar',
 );
+

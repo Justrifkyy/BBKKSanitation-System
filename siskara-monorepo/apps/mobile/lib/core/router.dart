@@ -109,6 +109,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/submission',
         builder: (context, state) => SubmissionFormScreen(
+          key: ValueKey(state.uri.toString()),
           draftId: state.uri.queryParameters['draftId'],
         ),
       ),

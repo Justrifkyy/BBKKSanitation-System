@@ -130,8 +130,8 @@ service cloud.firestore {
       // Owners may correct general data only while a submission is still a draft.
       // Status changes and final decisions remain restricted to trusted API routes.
       allow update: if isAnyRole(['kepala_kapal', 'kepala_penerbangan'])
-                    && ownsDraftSubmission(submissionId)
                     && resource.data.pengisi_id == request.auth.uid
+                    && resource.data.status == 'draft'
                     && request.resource.data.status == resource.data.status
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['data_umum', 'updated_at']);

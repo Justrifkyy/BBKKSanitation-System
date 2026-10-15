@@ -57,7 +57,7 @@ class AppConstants {
     'ARJUNA_API_BASE_URL',
     defaultValue: String.fromEnvironment(
       'SISKARA_API_BASE_URL',
-      defaultValue: 'https://arjuna-bbkk.site/api',
+      defaultValue: 'https://www.arjuna-bbkk.site/api',
     ),
   );
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ import '../../../services/firestore_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
+import '../services/submission_draft_storage.dart';
 
 class SubmissionFormScreen extends ConsumerStatefulWidget {
   const SubmissionFormScreen({super.key, this.draftId});
@@ -43,6 +45,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
   Future<_DraftFormData>? _draftFuture;
   bool _isSubmitting = false;
   bool _confirmsAccuracy = false;
+  Timer? _autoSaveDebounce;
+  bool _hasRestoredLocalDraft = false;
+  String? _restoredDraftTime;
 
   @override
   void initState() {
@@ -50,6 +55,25 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     _draftId = widget.draftId;
     if (widget.draftId != null) {
       _draftFuture = _loadDraft(widget.draftId!);
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _restoreLocalDraft();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(SubmissionFormScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.draftId != oldWidget.draftId) {
+      _draftId = widget.draftId;
+      if (widget.draftId != null) {
+        setState(() {
+          _draftFuture = _loadDraft(widget.draftId!);
+        });
+      } else {
+        _restoreLocalDraft();
+      }
     }
   }
 
@@ -152,17 +176,22 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       throw StateError('Template untuk draft ini tidak lagi tersedia.');
     }
     final items = await firestore.getTemplateItems(template.id);
-    final answers = await firestore.getSubmissionAnswers(draftId);
-    final mediaEntries = await Future.wait(
-      items.map((item) async {
-        final media = await firestore.getAnswerMedia(draftId, item.id);
-        media.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        return MapEntry(
-          item.id,
-          media.isEmpty ? null : media.first,
-        );
-      }),
-    );
+    List<SubmissionAnswerModel> answers = [];
+    try {
+      answers = await firestore.getSubmissionAnswers(draftId);
+    } catch (_) {}
+
+    final mediaEntries = <MapEntry<String, SubmissionAnswerMediaModel>>[];
+    for (final answer in answers) {
+      try {
+        final mediaList =
+            await firestore.getAnswerMedia(draftId, answer.templateItemId);
+        if (mediaList.isNotEmpty) {
+          mediaList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          mediaEntries.add(MapEntry(answer.templateItemId, mediaList.first));
+        }
+      } catch (_) {}
+    }
 
     for (final field in _fieldsFor(user.role)) {
       final value = submission.dataUmum[field.name];
@@ -179,16 +208,310 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         _controller('reason_${answer.templateItemId}').text = reason;
       }
     }
-    _savedEvidence.addEntries(
-      mediaEntries.where((entry) => entry.value != null).map(
-            (entry) => MapEntry(entry.key, entry.value!),
-          ),
-    );
+    _savedEvidence.addEntries(mediaEntries);
+
+    // Merge any local edits or photos
+    try {
+      final localDraft = await SubmissionDraftStorage.load(user.id);
+      if (localDraft != null &&
+          (localDraft.draftId == draftId || localDraft.draftId == null)) {
+        for (final entry in localDraft.generalData.entries) {
+          if (entry.value != null && entry.value.toString().isNotEmpty) {
+            _controller(entry.key).text = entry.value.toString();
+          }
+        }
+        for (final entry in localDraft.answers.entries) {
+          if (entry.value.isNotEmpty) {
+            _answers[entry.key] = entry.value;
+            _controller('answer_${entry.key}').text = entry.value;
+          }
+        }
+        for (final entry in localDraft.reasons.entries) {
+          if (entry.value.isNotEmpty) {
+            _controller('reason_${entry.key}').text = entry.value;
+          }
+        }
+        if (localDraft.confirmsAccuracy) {
+          _confirmsAccuracy = true;
+        }
+        for (final entry in localDraft.evidencePaths.entries) {
+          final file = File(entry.value);
+          if (file.existsSync() && !_evidence.containsKey(entry.key)) {
+            _evidence[entry.key] = XFile(entry.value);
+            final gps = localDraft.evidenceGps[entry.key];
+            if (gps != null && gps['lat'] != null && gps['lng'] != null) {
+              _positions[entry.key] = Position(
+                latitude: gps['lat']!,
+                longitude: gps['lng']!,
+                timestamp: DateTime.now(),
+                accuracy: 5.0,
+                altitude: 0.0,
+                altitudeAccuracy: 0.0,
+                heading: 0.0,
+                headingAccuracy: 0.0,
+                speed: 0.0,
+                speedAccuracy: 0.0,
+              );
+            }
+            final timeStr = localDraft.evidenceTimes[entry.key];
+            if (timeStr != null) {
+              _captureTimes[entry.key] =
+                  DateTime.tryParse(timeStr) ?? DateTime.now();
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    _draftId = draftId;
+    _hasRestoredLocalDraft = true;
+    _restoredDraftTime = DateFormat('dd/MM/yyyy HH:mm')
+        .format(submission.updatedAt ?? submission.createdAt);
+    _scheduleAutoSave();
     return _DraftFormData(template: template, items: items);
+  }
+
+  Future<void> _restoreLocalDraft() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null || !mounted || _hasRestoredLocalDraft) return;
+
+    final draft = await SubmissionDraftStorage.load(user.id);
+    if (draft == null || !mounted || draft.isEmpty) return;
+
+    setState(() {
+      _hasRestoredLocalDraft = true;
+      _draftId = draft.draftId;
+      _confirmsAccuracy = draft.confirmsAccuracy;
+      _restoredDraftTime =
+          DateFormat('dd/MM/yyyy HH:mm').format(draft.updatedAt);
+
+      for (final entry in draft.generalData.entries) {
+        if (entry.value != null && entry.value.toString().isNotEmpty) {
+          _controller(entry.key).text = entry.value.toString();
+        }
+      }
+
+      for (final entry in draft.answers.entries) {
+        if (entry.value.isNotEmpty) {
+          _answers[entry.key] = entry.value;
+          _controller('answer_${entry.key}').text = entry.value;
+        }
+      }
+
+      for (final entry in draft.reasons.entries) {
+        if (entry.value.isNotEmpty) {
+          _controller('reason_${entry.key}').text = entry.value;
+        }
+      }
+
+      for (final entry in draft.evidencePaths.entries) {
+        final file = File(entry.value);
+        if (file.existsSync()) {
+          _evidence[entry.key] = XFile(entry.value);
+          final gps = draft.evidenceGps[entry.key];
+          if (gps != null && gps['lat'] != null && gps['lng'] != null) {
+            _positions[entry.key] = Position(
+              latitude: gps['lat']!,
+              longitude: gps['lng']!,
+              timestamp: DateTime.now(),
+              accuracy: 5.0,
+              altitude: 0.0,
+              altitudeAccuracy: 0.0,
+              heading: 0.0,
+              headingAccuracy: 0.0,
+              speed: 0.0,
+              speedAccuracy: 0.0,
+            );
+          }
+          final timeStr = draft.evidenceTimes[entry.key];
+          if (timeStr != null) {
+            _captureTimes[entry.key] =
+                DateTime.tryParse(timeStr) ?? DateTime.now();
+          }
+        }
+      }
+    });
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = Timer(const Duration(milliseconds: 500), () {
+      _persistLocalDraft();
+    });
+  }
+
+  Future<void> _persistLocalDraft() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) return;
+
+    final generalData = _collectGeneralData(user.role);
+    final reasons = <String, String>{};
+    for (final key in _controllers.keys) {
+      if (key.startsWith('reason_')) {
+        final itemId = key.substring(7);
+        final text = _controllers[key]?.text.trim() ?? '';
+        if (text.isNotEmpty) reasons[itemId] = text;
+      }
+    }
+
+    final evidencePaths = <String, String>{};
+    final evidenceGps = <String, Map<String, double>>{};
+    final evidenceTimes = <String, String>{};
+
+    for (final entry in _evidence.entries) {
+      evidencePaths[entry.key] = entry.value.path;
+      final pos = _positions[entry.key];
+      if (pos != null) {
+        evidenceGps[entry.key] = {'lat': pos.latitude, 'lng': pos.longitude};
+      }
+      final time = _captureTimes[entry.key];
+      if (time != null) {
+        evidenceTimes[entry.key] = time.toIso8601String();
+      }
+    }
+
+    final draft = SubmissionDraftData(
+      draftId: _draftId,
+      userId: user.id,
+      transportMode: user.role == AppConstants.roleKepalaKapal
+          ? AppConstants.modaKapal
+          : AppConstants.modaPesawat,
+      generalData: generalData,
+      answers: Map<String, String>.from(_answers),
+      reasons: reasons,
+      evidencePaths: evidencePaths,
+      evidenceGps: evidenceGps,
+      evidenceTimes: evidenceTimes,
+      confirmsAccuracy: _confirmsAccuracy,
+      updatedAt: DateTime.now(),
+    );
+
+    if (draft.isNotEmpty) {
+      await SubmissionDraftStorage.save(draft);
+    }
+  }
+
+  Future<void> _resetAndStartFresh() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mulai Pengajuan Baru?'),
+        content: const Text(
+          'Draf pengisian saat ini yang belum terkirim akan dikosongkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: SiskaraTheme.error,
+            ),
+            child: const Text('Mulai Baru'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final user = ref.read(authStateProvider).valueOrNull;
+      if (user != null) {
+        await SubmissionDraftStorage.clear(user.id);
+      }
+      setState(() {
+        _draftId = null;
+        _hasRestoredLocalDraft = false;
+        _restoredDraftTime = null;
+        _confirmsAccuracy = false;
+        for (final controller in _controllers.values) {
+          controller.clear();
+        }
+        _answers.clear();
+        _evidence.clear();
+        _positions.clear();
+        _captureTimes.clear();
+        _savedEvidence.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Formulir berhasil dikosongkan.')),
+      );
+      if (widget.draftId != null && mounted) {
+        context.go('/submission');
+      }
+    }
+  }
+
+  Widget _buildRestoredDraftBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F3D39).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF2DD4BF).withValues(alpha: 0.35),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.history_toggle_off_rounded,
+            size: 20,
+            color: Color(0xFF0D9488),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Melanjutkan Draf Pengisian',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F3D39),
+                  ),
+                ),
+                Text(
+                  _restoredDraftTime != null
+                      ? 'Tersimpan otomatis • $_restoredDraftTime'
+                      : 'Data yang Anda isi sebelumnya telah dipulihkan.',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: SiskaraTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _resetAndStartFresh,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Mulai Baru',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFB93838),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   void dispose() {
+    _autoSaveDebounce?.cancel();
+    _persistLocalDraft();
     for (final controller in _controllers.values) {
       controller.dispose();
     }
@@ -276,6 +599,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         _positions[item.id] = position;
         _captureTimes[item.id] = captureTime;
       });
+      _scheduleAutoSave();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -351,6 +675,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     try {
       final firestore = ref.read(firestoreServiceProvider);
       final storage = StorageService();
+      final isNew = _draftId == null;
       final submissionId = _draftId ?? firestore.newSubmissionId();
       _draftId = submissionId;
       final now = DateTime.now();
@@ -364,7 +689,11 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         createdAt: now,
         updatedAt: now,
       );
-      await firestore.createSubmissionWithId(submissionId, submission);
+      await firestore.createSubmissionWithId(
+        submissionId,
+        submission,
+        isNew: isNew,
+      );
 
       for (final item in items) {
         final value = _answerFor(item);
@@ -400,6 +729,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
           );
         }
       }
+      await _persistLocalDraft();
       ref.invalidate(userSubmissionsProvider);
       if (!mounted) return;
       context.go('/history');
@@ -555,6 +885,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
     try {
       final firestore = ref.read(firestoreServiceProvider);
       final storage = StorageService();
+      final isNew = _draftId == null;
       final submissionId = _draftId ?? firestore.newSubmissionId();
       _draftId = submissionId;
       final now = DateTime.now();
@@ -568,7 +899,11 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         createdAt: now,
         updatedAt: now,
       );
-      await firestore.createSubmissionWithId(submissionId, submission);
+      await firestore.createSubmissionWithId(
+        submissionId,
+        submission,
+        isNew: isNew,
+      );
 
       for (final item in items) {
         submissionStage = 'menyimpan jawaban untuk bagian ${item.label}';
@@ -612,6 +947,10 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
             submissionId: submissionId,
             pin: pin,
           );
+      await SubmissionDraftStorage.clear(user.id);
+      _draftId = null;
+      _hasRestoredLocalDraft = false;
+      _restoredDraftTime = null;
       ref.invalidate(userSubmissionsProvider);
 
       if (!mounted) return;
@@ -791,6 +1130,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
             padding: const EdgeInsets.fromLTRB(13, 11, 13, 20),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
+                if (_hasRestoredLocalDraft) _buildRestoredDraftBanner(),
                 _WelcomeCard(
                   name: user.nama,
                   isKapal: template.modaTransportasi == AppConstants.modaKapal,
@@ -836,9 +1176,12 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                   value: _confirmsAccuracy,
                   onChanged: _isSubmitting
                       ? null
-                      : (value) => setState(
+                      : (value) {
+                          setState(
                             () => _confirmsAccuracy = value ?? false,
-                          ),
+                          );
+                          _scheduleAutoSave();
+                        },
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                   dense: true,
@@ -903,6 +1246,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
   Widget _buildGeneralField(_GeneralField field) {
     return TextFormField(
       controller: _controller(field.name),
+      onChanged: (_) => _scheduleAutoSave(),
       keyboardType: field.numeric
           ? TextInputType.numberWithOptions(
               decimal: !field.wholeNumber,
@@ -1000,6 +1344,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
         selected,
       );
     });
+    _scheduleAutoSave();
   }
 
   List<_GeneralFieldGroup> _fieldGroupsFor(String role) =>
@@ -1106,6 +1451,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 void selectOption(String option) {
                   field.didChange(option);
                   setState(() => _answers[item.id] = option);
+                  _scheduleAutoSave();
                 }
 
                 return Column(
@@ -1170,7 +1516,10 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 labelText: 'Jawaban',
                 hintText: 'Masukkan hasil pemeriksaan',
               ),
-              onChanged: (value) => setState(() => _answers[item.id] = value),
+              onChanged: (value) {
+                setState(() => _answers[item.id] = value);
+                _scheduleAutoSave();
+              },
               validator: (value) {
                 if ((value == null || value.trim().isEmpty) &&
                     item.isRequiredFor(_answers)) {
@@ -1189,6 +1538,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _controller('reason_${item.id}'),
+              onChanged: (_) => _scheduleAutoSave(),
               minLines: 2,
               maxLines: 4,
               textCapitalization: TextCapitalization.sentences,
@@ -1317,11 +1667,14 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                   TextButton(
                     onPressed: _isSubmitting
                         ? null
-                        : () => setState(() {
+                        : () {
+                            setState(() {
                               _evidence.remove(item.id);
                               _positions.remove(item.id);
                               _captureTimes.remove(item.id);
-                            }),
+                            });
+                            _scheduleAutoSave();
+                          },
                     child: const Text('Hapus foto baru'),
                   ),
               ],
