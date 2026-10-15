@@ -1,42 +1,20 @@
-import { NextRequest } from 'next/server';
-import { NextResponse as NR } from 'next/server';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * Next.js Middleware
  * Protects all routes under /dashboard — requires authenticated session.
- * API routes use their own auth (Firebase ID token in Authorization header).
+ * API routes handle their own auth via verifyAuth (Firebase ID token).
  */
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export function middleware(request: NextRequest) {
+  const sessionCookie = request.cookies.get('session');
 
-  // Skip API routes (they handle their own auth via verifyAuth)
-  if (pathname.startsWith('/api')) {
-    return NR.next();
+  if (!sessionCookie?.value) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Skip public routes and static assets (images, icons, etc.)
-  if (
-    pathname === '/login' ||
-    pathname === '/' ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    /\.(?:png|jpg|jpeg|gif|webp|svg|ico|json)$/i.test(pathname)
-  ) {
-    return NR.next();
-  }
-
-  // For dashboard routes, check for session cookie
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
-
-  if (!sessionCookie) {
-    return NR.redirect(new URL('/login', request.url));
-  }
-
-  return NR.next();
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico)$).*)'],
+  matcher: ['/dashboard/:path*'],
 };
