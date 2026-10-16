@@ -21,13 +21,13 @@ const linkGroups = [
     label: 'Menu utama',
     links: [
       { href: '/dashboard', label: 'Ringkasan', icon: 'overview' },
-      { href: '/dashboard/submissions', label: 'Pengajuan', icon: 'submissions' },
+      { href: '/dashboard/submissions', label: 'Hasil Skrining', icon: 'submissions' },
     ],
   },
   {
     label: 'Administrasi',
     links: [
-      { href: '/dashboard/users', label: 'Pengguna', icon: 'users' },
+      { href: '/dashboard/users', label: 'Manajemen Pengguna', icon: 'users' },
       { href: '/dashboard/checklists', label: 'Checklist', icon: 'checklist' },
       { href: '/dashboard/master-data', label: 'Data master', icon: 'master' },
       { href: '/dashboard/documents', label: 'Dokumen', icon: 'documents' },

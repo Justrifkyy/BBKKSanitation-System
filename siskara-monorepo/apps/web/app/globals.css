@@ -2837,3 +2837,41 @@ select:focus-visible {
       grid-column: auto;
     }
   }
+
+  .admin-link-button {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    color: #0d9488;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+  }
+  .admin-link-button:hover {
+    background: rgba(13, 148, 136, 0.08);
+    color: #0f766e;
+  }
+  .admin-link-button--danger {
+    color: #e11d48;
+  }
+  .admin-link-button--danger:hover {
+    background: rgba(225, 29, 72, 0.08);
+    color: #be123c;
+  }
+  .button--danger {
+    background: #e11d48;
+    color: #ffffff;
+    border: 1px solid #be123c;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .button--danger:hover {
+    background: #be123c;
+  }
+

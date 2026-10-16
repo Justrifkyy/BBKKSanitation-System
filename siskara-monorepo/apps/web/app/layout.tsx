@@ -17,8 +17,11 @@ export const metadata: Metadata = {
   description:
     "ARJUNA - Aplikasi Skrining dan Pemeriksaan Sanitasi Transportasi, Balai Besar Kekarantinaan Kesehatan Makassar.",
   icons: {
-    icon: "/LOGOSISTEM.png",
-    apple: "/LOGOSISTEM.png",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: "/icon.png",
   },
 };
 
