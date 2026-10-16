@@ -138,8 +138,8 @@ export function AdminShell({
             <Image
               src="/LOGOSISTEM.png"
               alt="Logo ARJUNA"
-              width={32}
-              height={32}
+              width={36}
+              height={36}
               priority
               className="sidebar-logo-arjuna"
             />
@@ -185,14 +185,39 @@ export function AdminShell({
       </aside>
       <div className="dashboard-main">
         <header className="dashboard-topbar">
-          <div className="breadcrumb"><span>Portal Admin</span><span aria-hidden="true">/</span><strong>{title}</strong></div>
-          <span className="topbar-date">Portal administrasi internal</span>
+          <div className="topbar-brand-group">
+            <Image
+              src="/LOGOSISTEM.png"
+              alt="Logo ARJUNA"
+              width={30}
+              height={30}
+              priority
+              className="topbar-logo-arjuna"
+            />
+            <div className="breadcrumb"><span>Portal Admin</span><span aria-hidden="true">/</span><strong>{title}</strong></div>
+          </div>
+          <span className="topbar-date">Balai Besar Kekarantinaan Kesehatan Makassar</span>
         </header>
         <div className="dashboard-content admin-page-content">
           {error && <div className="dashboard-alert" role="alert">{error}</div>}
-          {checking || !value
-            ? <div className="admin-loading" role="status">Memverifikasi sesi Admin…</div>
-            : <AdminContext.Provider value={value}>{children}</AdminContext.Provider>}
+          {checking || !value ? (
+            <div className="admin-session-loading" role="status">
+              <div className="admin-session-loading__spinner">
+                <Image
+                  src="/LOGOSISTEM.png"
+                  alt="Memuat ARJUNA"
+                  width={52}
+                  height={52}
+                  priority
+                  className="admin-session-loading__logo"
+                />
+                <div className="admin-session-loading__ring" aria-hidden="true" />
+              </div>
+              <p className="admin-session-loading__text">Memverifikasi sesi Admin…</p>
+            </div>
+          ) : (
+            <AdminContext.Provider value={value}>{children}</AdminContext.Provider>
+          )}
         </div>
       </div>
     </main>

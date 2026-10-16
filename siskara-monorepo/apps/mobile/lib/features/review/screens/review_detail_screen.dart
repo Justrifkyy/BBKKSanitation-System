@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../../core/error_message.dart';
 import '../../../core/widgets/app_bottom_nav.dart';
+import '../../../core/widgets/arjuna_loading.dart';
 import '../../../core/widgets/interactive_photo_viewer.dart';
 import '../../../models/checklist_template_model.dart';
 import '../../../models/submission_model.dart';
@@ -249,7 +250,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
         future: _reviewFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ArjunaLoadingWidget(size: 64, logoSize: 40));
           }
           if (snapshot.hasError) {
             return _ReviewError(
@@ -1515,17 +1516,11 @@ class _CertificateCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16A34A).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.verified_rounded,
-                  color: Color(0xFF16A34A),
-                  size: 24,
-                ),
+              Image.asset(
+                'assets/images/logo_arjuna.png',
+                width: 38,
+                height: 38,
+                fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
               Expanded(

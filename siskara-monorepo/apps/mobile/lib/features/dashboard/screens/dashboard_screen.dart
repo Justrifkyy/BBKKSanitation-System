@@ -6,6 +6,7 @@ import '../../../core/constants.dart';
 import '../../../core/error_message.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/app_bottom_nav.dart';
+import '../../../core/widgets/arjuna_loading.dart';
 import '../../../models/submission_model.dart';
 import '../../../models/user_model.dart';
 import '../../../state/auth_state.dart';
@@ -22,9 +23,7 @@ class DashboardScreen extends ConsumerWidget {
         user?.isStaf == true ? ref.watch(pendingSubmissionsProvider) : null;
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const ArjunaLoadingScreen(message: 'Menyiapkan Dashboard...');
     }
 
     return Scaffold(
@@ -155,17 +154,11 @@ class _WelcomePanel extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child: Image.asset(
-                        'assets/images/logo_arjuna.png',
-                        fit: BoxFit.contain,
-                      ),
+                    Image.asset(
+                      'assets/images/logo_arjuna.png',
+                      width: 38,
+                      height: 38,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(width: 9),
                     Column(

@@ -790,6 +790,26 @@ select:focus-visible {
   text-decoration: none;
 }
 
+.sidebar-brand__logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.sidebar-logo-arjuna {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  background: transparent;
+  filter: drop-shadow(0 2px 5px rgba(15, 118, 110, 0.22));
+  transition: transform 0.2s ease;
+}
+
+.sidebar-brand:hover .sidebar-logo-arjuna {
+  transform: scale(1.05);
+}
+
 .brand-mark--sidebar {
   width: 39px;
   height: 39px;
@@ -1041,6 +1061,20 @@ select:focus-visible {
 
 .breadcrumb svg {
   color: #aab4b6;
+}
+
+.topbar-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-logo-arjuna {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  background: transparent;
+  filter: drop-shadow(0 2px 4px rgba(15, 118, 110, 0.18));
 }
 
 .breadcrumb strong {
@@ -2502,6 +2536,62 @@ select:focus-visible {
     color: #829095;
     font-size: 11px;
     text-align: center;
+  }
+
+  .admin-session-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 18px;
+    background: transparent;
+    padding: 48px 16px;
+  }
+
+  .admin-session-loading__spinner {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+
+  .admin-session-loading__logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    background: transparent;
+    animation: arjunaPulse 2.2s ease-in-out infinite;
+  }
+
+  .admin-session-loading__ring {
+    position: absolute;
+    inset: 0;
+    border: 2.5px solid rgba(15, 118, 110, 0.12);
+    border-top-color: #0d9488;
+    border-radius: 50%;
+    animation: arjunaSpin 0.9s linear infinite;
+    box-sizing: border-box;
+  }
+
+  .admin-session-loading__text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f766e;
+    letter-spacing: 0.2px;
+    margin: 0;
+  }
+
+  @keyframes arjunaSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes arjunaPulse {
+    0%, 100% { transform: scale(1); opacity: 0.92; }
+    50% { transform: scale(1.06); opacity: 1; }
   }
 
   .admin-error {

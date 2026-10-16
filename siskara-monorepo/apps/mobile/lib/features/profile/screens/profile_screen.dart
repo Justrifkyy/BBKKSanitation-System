@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../../core/error_message.dart';
 import '../../../core/widgets/app_bottom_nav.dart';
+import '../../../core/widgets/arjuna_loading.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
 
@@ -20,7 +21,7 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
       body: profile.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: ArjunaLoadingWidget()),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(18),

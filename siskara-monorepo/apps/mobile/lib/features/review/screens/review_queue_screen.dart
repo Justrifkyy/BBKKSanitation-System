@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
 import '../../../core/error_message.dart';
 import '../../../core/widgets/app_bottom_nav.dart';
+import '../../../core/widgets/arjuna_loading.dart';
 import '../../../models/submission_model.dart';
 import '../../../state/auth_state.dart';
 import '../../../state/submission_state.dart';
@@ -83,7 +84,7 @@ class ReviewQueueScreen extends ConsumerWidget {
                   ],
                 ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: ArjunaLoadingWidget()),
         error: (error, _) => _QueueFailure(
           message: 'Antrian tidak dapat dimuat: ${ErrorMessage.from(error)}',
           onRetry: () => ref.invalidate(pendingSubmissionsProvider),
