@@ -373,13 +373,13 @@ class SiskaraTheme {
       case 'draft':
         return 'Draft';
       case 'ditolak_otomatis':
-        return 'Ditolak Otomatis';
+        return 'Tidak Memenuhi Syarat';
       case 'menunggu_verifikasi_staf':
-        return 'Menunggu Verifikasi';
+        return 'Menunggu Penilaian Staf';
       case 'ditolak_staf':
-        return 'Ditolak Staf';
+        return 'Tidak Memenuhi Syarat';
       case 'final':
-        return 'Final';
+        return 'Memenuhi Syarat (Disetujui)';
       default:
         return status;
     }

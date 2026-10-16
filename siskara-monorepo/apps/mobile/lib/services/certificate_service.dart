@@ -91,7 +91,7 @@ class CertificateService {
                       children: [
                         pw.Text(
                           'KEMENTERIAN KESEHATAN REPUBLIK INDONESIA',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             fontSize: 11,
                             fontWeight: pw.FontWeight.bold,
                             letterSpacing: 0.3,
@@ -100,7 +100,7 @@ class CertificateService {
                         ),
                         pw.Text(
                           'DIREKTORAT JENDERAL PENCEGAHAN DAN PENGENDALIAN PENYAKIT',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             fontSize: 9.5,
                             fontWeight: pw.FontWeight.bold,
                           ),
@@ -109,10 +109,10 @@ class CertificateService {
                         pw.SizedBox(height: 1),
                         pw.Text(
                           'BALAI BESAR KEKARANTINAAN KESEHATAN MAKASSAR',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             fontSize: 12.5,
                             fontWeight: pw.FontWeight.bold,
-                            color: const PdfColor(0, 0.33, 0.33),
+                            color: PdfColor(0, 0.33, 0.33),
                           ),
                           textAlign: pw.TextAlign.center,
                         ),
@@ -146,7 +146,7 @@ class CertificateService {
                       isKapal
                           ? 'SURAT KETERANGAN KELAYAKAN SANITASI KAPAL'
                           : 'SURAT KETERANGAN PENGAWASAN SANITASI PESAWAT UDARA',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 12.5,
                         fontWeight: pw.FontWeight.bold,
                         letterSpacing: 0.2,
@@ -159,7 +159,7 @@ class CertificateService {
                       isKapal
                           ? 'SHIP SANITATION HEALTH CLEARANCE CERTIFICATE'
                           : 'AIRCRAFT SANITATION AND HEALTH INSPECTION CLEARANCE',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 9,
                         fontStyle: pw.FontStyle.italic,
                         color: PdfColors.grey800,
@@ -169,7 +169,7 @@ class CertificateService {
                     pw.SizedBox(height: 3),
                     pw.Text(
                       'Nomor: $docNumber',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 9.5,
                         fontWeight: pw.FontWeight.bold,
                       ),
@@ -215,7 +215,7 @@ class CertificateService {
               // ─── TABEL EVALUASI AREA SANITASI ──────────────────────
               pw.Text(
                 'HASIL EVALUASI PEMERIKSAAN AREA SANITASI:',
-                style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold),
+                style: const pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold),
               ),
               pw.SizedBox(height: 4),
 
@@ -266,10 +266,10 @@ class CertificateService {
                         children: [
                           pw.Text(
                             'KESIMPULAN & REKOMENDASI KARANTINA KESEHATAN:',
-                            style: pw.TextStyle(
+                            style: const pw.TextStyle(
                               fontSize: 8.5,
                               fontWeight: pw.FontWeight.bold,
-                              color: const PdfColor(0.1, 0.45, 0.2),
+                              color: PdfColor(0.1, 0.45, 0.2),
                             ),
                           ),
                           pw.SizedBox(height: 2),
@@ -311,7 +311,7 @@ class CertificateService {
                             children: [
                               pw.Text(
                                 '[TERVERIFIKASI SISTEM ARJUNA]',
-                                style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: const PdfColor(0, 0.4, 0.4)),
+                                style: const pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: PdfColor(0, 0.4, 0.4)),
                               ),
                               pw.Text(
                                 'Ditandatangani secara digital via PIN',
@@ -323,7 +323,7 @@ class CertificateService {
                         pw.SizedBox(height: 8),
                         pw.Text(
                           pengisiNama ?? 'Deklaran Pemohon',
-                          style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+                          style: const pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
                           textAlign: pw.TextAlign.center,
                         ),
                         pw.Text(
@@ -358,7 +358,7 @@ class CertificateService {
                         pw.SizedBox(height: 6),
                         pw.Text(
                           verifikatorNama ?? 'Petugas Validasi Sanitasi BBKK',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             fontSize: 9,
                             fontWeight: pw.FontWeight.bold,
                             decoration: pw.TextDecoration.underline,
@@ -439,7 +439,7 @@ class CertificateService {
       children: [
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          child: pw.Text(label1, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800)),
+          child: pw.Text(label1, style: const pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800)),
         ),
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -447,7 +447,7 @@ class CertificateService {
         ),
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          child: pw.Text(label2, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800)),
+          child: pw.Text(label2, style: const pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800)),
         ),
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -462,7 +462,7 @@ class CertificateService {
       padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
       child: pw.Text(
         text,
-        style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold),
+        style: const pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold),
         textAlign: pw.TextAlign.center,
       ),
     );
@@ -474,7 +474,7 @@ class CertificateService {
     ChecklistTemplateItemModel? item,
   }) {
     final isLayak = answer.nilaiJawaban == 'layak' || !answer.statusGagal;
-    final statusText = isLayak ? 'MEMENUHI (LAYAK)' : 'TIDAK MEMENUHI';
+    final statusText = isLayak ? 'MEMENUHI SYARAT' : 'TIDAK MEMENUHI SYARAT';
     final statusColor = isLayak ? const PdfColor(0.1, 0.5, 0.2) : PdfColors.red800;
 
     return pw.TableRow(

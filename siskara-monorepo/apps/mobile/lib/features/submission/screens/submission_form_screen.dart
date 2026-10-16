@@ -79,51 +79,57 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
   }
 
   static const _shipFields = <_GeneralField>[
-    _GeneralField('nama_kapal', 'Nama kapal'),
-    _GeneralField('jenis_kapal', 'Jenis kapal'),
-    _GeneralField('besar_kapal_grt', 'Besar kapal (GRT)', numeric: true),
-    _GeneralField('bendera', 'Bendera'),
+    _GeneralField('nama_kapal', 'Nama kapal', fullWidth: true),
+    _GeneralField('jenis_kapal', 'Jenis kapal', fullWidth: true),
+    _GeneralField('besar_kapal_grt', 'Besar kapal (GRT)', numeric: true, fullWidth: true),
+    _GeneralField('bendera', 'Bendera', fullWidth: true),
     _GeneralField('nomor_imo', 'Nomor IMO', fullWidth: true),
     _GeneralField('pelabuhan_asal', 'Pelabuhan asal', fullWidth: true),
-    _GeneralField(
-      'nama_pemilik_agen',
-      'Nama pemilik / agen',
-      fullWidth: false,
-    ),
     _GeneralField(
       'tujuan_pelabuhan_berikutnya',
       'Tujuan pelabuhan berikutnya',
       required: false,
-      fullWidth: false,
+      fullWidth: true,
+    ),
+    _GeneralField(
+      'lokasi_sandar',
+      'Lokasi sandar',
+      hint: 'Contoh: Dermaga Hatta / Kolam Labuh',
+      fullWidth: true,
+    ),
+    _GeneralField(
+      'nama_pemilik_agen',
+      'Nama pemilik / agen',
+      fullWidth: true,
     ),
     _GeneralField(
       'tanggal_jam_tiba',
       'Tanggal dan jam tiba',
-      hint: 'Kedatangan',
+      hint: 'Pilih tanggal & jam tiba',
       dateTime: true,
-      fullWidth: false,
+      fullWidth: true,
     ),
     _GeneralField(
       'tanggal_jam_berangkat',
       'Tanggal dan jam berangkat',
       required: false,
-      hint: 'Keberangkatan',
+      hint: 'Pilih tanggal & jam berangkat',
       dateTime: true,
-      fullWidth: false,
+      fullWidth: true,
     ),
     _GeneralField(
       'diperiksa_tanggal_jam',
       'Tanggal dan jam diperiksa',
-      hint: 'Waktu diperiksa',
+      hint: 'Pilih tanggal & jam diperiksa',
       dateTime: true,
-      fullWidth: false,
+      fullWidth: true,
     ),
-    _GeneralField('lokasi_sandar', 'Lokasi sandar', fullWidth: false),
     _GeneralField(
       'jumlah_awak_kapal',
       'Jumlah awak kapal',
       numeric: true,
       wholeNumber: true,
+      fullWidth: true,
     ),
     _GeneralField(
       'jumlah_penumpang',
@@ -131,24 +137,27 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       required: false,
       numeric: true,
       wholeNumber: true,
+      fullWidth: true,
     ),
   ];
 
   static const _aircraftFields = <_GeneralField>[
-    _GeneralField('pemilik_atau_penyelenggara', 'Pemilik / penyelenggara'),
-    _GeneralField('nomor_penerbangan', 'Nomor penerbangan'),
+    _GeneralField('pemilik_atau_penyelenggara', 'Pemilik / penyelenggara', fullWidth: true),
+    _GeneralField('nomor_penerbangan', 'Nomor penerbangan', fullWidth: true),
     _GeneralField(
       'tanda_kebangsaan_dan_pendaftaran',
       'Tanda kebangsaan dan pendaftaran',
+      fullWidth: true,
     ),
     _GeneralField(
       'tanggal_jam',
       'Tanggal dan jam penerbangan',
-      hint: 'Contoh: 13-10-2026 08:30',
+      hint: 'Pilih tanggal & jam penerbangan',
       dateTime: true,
+      fullWidth: true,
     ),
-    _GeneralField('berangkat_dari', 'Berangkat dari'),
-    _GeneralField('tujuan', 'Tujuan'),
+    _GeneralField('berangkat_dari', 'Berangkat dari', fullWidth: true),
+    _GeneralField('tujuan', 'Tujuan', fullWidth: true),
   ];
 
   TextEditingController _controller(String key) =>
@@ -907,10 +916,10 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       if (mounted) {
         setState(() => _submittingStatus = 'Mengesahkan deklarasi dengan PIN...');
       }
-      final status = await ref.read(authServiceProvider).signSubmission(
-            submissionId: submissionId,
-            pin: pin,
-          );
+      await ref.read(authServiceProvider).signSubmission(
+        submissionId: submissionId,
+        pin: pin,
+      );
       await SubmissionDraftStorage.clear(user.id);
       _draftId = null;
       _hasRestoredLocalDraft = false;
@@ -919,20 +928,17 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
 
       if (!mounted) return;
       const label =
-          'Dokumentasi sanitasi berhasil dikirim dan menunggu verifikasi penilaian oleh Petugas BBKK.';
+          'Dokumentasi sanitasi berhasil dikirim dan menunggu verifikasi serta penetapan kelayakan (Memenuhi Syarat / Tidak Memenuhi Syarat) oleh Staf BBKK.';
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
-          icon: Icon(
-            status == AppConstants.statusDitolakOtomatis
-                ? Icons.warning_amber_rounded
-                : Icons.check_circle_outline,
-            color: status == AppConstants.statusDitolakOtomatis
-                ? SiskaraTheme.warning
-                : SiskaraTheme.success,
+          icon: const Icon(
+            Icons.check_circle_outline,
+            color: SiskaraTheme.success,
+            size: 32,
           ),
-          title: const Text('Deklarasi selesai'),
+          title: const Text('Deklarasi Selesai Dikirim'),
           content: const Text(label),
           actions: [
             FilledButton(
@@ -1111,8 +1117,11 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 for (final group in _fieldGroupsFor(user.role)) ...[
                   _GeneralFieldGroupCard(
                     group: group,
-                    fields: fields
-                        .where((field) => group.fieldNames.contains(field.name))
+                    fields: group.fieldNames
+                        .map((name) => fields.firstWhere(
+                              (f) => f.name == name,
+                              orElse: () => _GeneralField(name, name),
+                            ))
                         .toList(),
                     buildField: _buildGeneralField,
                   ),
@@ -1121,9 +1130,9 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 const SizedBox(height: 14),
                 const _FormSectionTitle(
                   number: '02',
-                  title: 'Checklist sanitasi',
+                  title: 'Dokumentasi sanitasi',
                   subtitle:
-                      'Lengkapi jawaban dan sertakan foto pada setiap bagian.',
+                      'Ambil foto kondisi sanitasi setiap area. Penilaian kelayakan dievaluasi oleh Staf BBKK.',
                 ),
                 const SizedBox(height: 8),
                 for (final entry in categories.entries) ...[
@@ -1203,11 +1212,11 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Deklarasi akan ditandatangani dengan PIN. Temuan tertentu dapat ditolak otomatis.',
+                  'Deklarasi ditandatangani dengan PIN. Penilaian kelayakan (Memenuhi Syarat / Tidak Memenuhi Syarat) sepenuhnya dilakukan oleh Staf BBKK.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: SiskaraTheme.textSecondary,
-                    fontSize: 12,
+                    fontSize: 12.5,
                   ),
                 ),
               ]),
@@ -1443,7 +1452,7 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
           ),
           const SizedBox(height: 9),
           const Text(
-            'Ambil foto kondisi sanitasi area ini. Penilaian kelayakan akan diisi oleh Petugas BBKK.',
+            'Ambil foto kondisi sanitasi area ini. Penilaian memenuhi syarat atau tidak memenuhi syarat sepenuhnya ditentukan oleh Staf BBKK.',
             style: TextStyle(
               fontSize: 13,
               color: SiskaraTheme.textSecondary,

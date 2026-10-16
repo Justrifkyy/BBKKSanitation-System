@@ -125,11 +125,11 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
         final proceed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Terdapat Temuan Tidak Layak'),
+            title: const Text('Terdapat Temuan Tidak Memenuhi Syarat'),
             content: Text(
-              'Ada $tidakLayakCount area pemeriksaan yang Anda nilai "Tidak Layak". '
-              'Pengajuan dengan temuan tidak layak sebaiknya ditolak untuk perbaikan oleh Nahkoda/Pilot. '
-              'Apakah Anda yakin ingin tetap melanjutkan penolakan atau revisi?',
+              'Ada $tidakLayakCount area pemeriksaan yang Anda nilai "Tidak Memenuhi Syarat". '
+              'Pengajuan dengan temuan ini sebaiknya ditolak atau diminta revisi untuk perbaikan oleh Nahkoda/Pilot. '
+              'Apakah Anda ingin melanjutkan penetapan Tidak Memenuhi Syarat (Revisi)?',
             ),
             actions: [
               TextButton(
@@ -139,7 +139,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
                 style: FilledButton.styleFrom(backgroundColor: SiskaraTheme.error),
-                child: const Text('Tolak Pengajuan'),
+                child: const Text('Lanjutkan Revisi'),
               ),
             ],
           ),
@@ -411,24 +411,15 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                       ),
               ),
 
-              if (review.submission.status == 'ditolak_otomatis') ...[
-                const SizedBox(height: 14),
-                const _NoticeCard(
-                  icon: Icons.warning_amber_rounded,
-                  color: SiskaraTheme.error,
-                  title: 'Temuan otomatis',
-                  message:
-                      'Checklist menemukan kondisi yang memenuhi kriteria penolakan otomatis.',
-                ),
-              ],
               if (widget.readOnly ||
                   review.submission.status != 'menunggu_verifikasi_staf') ...[
                 const SizedBox(height: 14),
                 const _NoticeCard(
-                  icon: Icons.visibility_outlined,
-                  color: SiskaraTheme.textSecondary,
-                  title: 'Informasi pengajuan',
-                  message: 'Data pengajuan ini ditampilkan dalam mode baca saja.',
+                  icon: Icons.assignment_turned_in_outlined,
+                  color: Color(0xFF0D9488),
+                  title: 'Wewenang Penilaian Sanitasi',
+                  message:
+                      'Penetapan Memenuhi Syarat atau Tidak Memenuhi Syarat sepenuhnya dilakukan oleh Staf BBKK berdasarkan evaluasi bukti kondisi di lapangan.',
                 ),
               ],
             ],
@@ -509,7 +500,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                               ? null
                               : () => _decide('reject', review),
                           icon: const Icon(Icons.close, size: 18),
-                          label: const Text('Tolak / revisi'),
+                          label: const Text('Tidak Memenuhi Syarat'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: SiskaraTheme.error,
                             side: const BorderSide(color: SiskaraTheme.error),
@@ -533,7 +524,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                                   ),
                                 )
                               : const Icon(Icons.check, size: 18),
-                          label: const Text('Setujui & Terbitkan'),
+                          label: const Text('Memenuhi Syarat & Terbitkan'),
                           style: FilledButton.styleFrom(
                             backgroundColor: SiskaraTheme.success,
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -666,7 +657,9 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
   Widget build(BuildContext context) {
     final approving = widget.decision == 'approve';
     return AlertDialog(
-      title: Text(approving ? 'Setujui pengajuan?' : 'Tolak / minta revisi?'),
+      title: Text(approving
+          ? 'Tetapkan Memenuhi Syarat?'
+          : 'Tetapkan Tidak Memenuhi Syarat?'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -674,8 +667,8 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
           children: [
             Text(
               approving
-                  ? 'Keputusan ini bersifat final dan dokumen resmi (PHQC / Berkas Verifikasi) akan langsung diterbitkan.'
-                  : 'Tuliskan temuan atau catatan yang harus diperbaiki oleh Nahkoda/Pilot.',
+                  ? 'Dengan ini Staf BBKK menetapkan sarana telah MEMENUHI SYARAT KELAYAKAN SANITASI. Dokumen resmi akan langsung diterbitkan.'
+                  : 'Tuliskan rincian temuan sanitasi yang TIDAK MEMENUHI SYARAT untuk diperbaiki oleh Nahkoda/Pilot.',
             ),
             if (!approving) ...[
               const SizedBox(height: 14),
@@ -722,7 +715,7 @@ class _ReviewDecisionDialogState extends State<_ReviewDecisionDialog> {
           style: FilledButton.styleFrom(
             backgroundColor: approving ? SiskaraTheme.success : SiskaraTheme.error,
           ),
-          child: Text(approving ? 'Konfirmasi persetujuan' : 'Kirim penolakan'),
+          child: Text(approving ? 'Konfirmasi & Terbitkan' : 'Simpan Tidak Memenuhi'),
         ),
       ],
     );
@@ -1076,10 +1069,10 @@ class _AnswerDetail extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          isLayak ? 'LAYAK' : 'TIDAK LAYAK',
+                          isLayak ? 'MEMENUHI SYARAT' : 'TIDAK MEMENUHI SYARAT',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1097,7 +1090,7 @@ class _AnswerDetail extends StatelessWidget {
                           size: 16,
                           color: isLayak ? Colors.white : SiskaraTheme.success,
                         ),
-                        label: const Text('Layak'),
+                        label: const Text('Memenuhi Syarat'),
                         style: OutlinedButton.styleFrom(
                           backgroundColor:
                               isLayak ? SiskaraTheme.success : null,
@@ -1117,7 +1110,7 @@ class _AnswerDetail extends StatelessWidget {
                           size: 16,
                           color: isTidakLayak ? Colors.white : SiskaraTheme.error,
                         ),
-                        label: const Text('Tidak Layak'),
+                        label: const Text('Tidak Memenuhi Syarat'),
                         style: OutlinedButton.styleFrom(
                           backgroundColor:
                               isTidakLayak ? SiskaraTheme.error : null,
@@ -1136,7 +1129,7 @@ class _AnswerDetail extends StatelessWidget {
                     controller: reasonController,
                     onChanged: onReasonChanged,
                     decoration: const InputDecoration(
-                      labelText: 'Catatan Temuan Tidak Layak *',
+                      labelText: 'Catatan Temuan Tidak Memenuhi Syarat *',
                       hintText: 'Jelaskan temuan kondisi sanitasi pada area ini',
                       isDense: true,
                     ),
@@ -1163,7 +1156,7 @@ class _AnswerDetail extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Temuan Pegawai BBKK: ${answer.alasan}',
+                    'Temuan Staf BBKK: ${answer.alasan}',
                     style: const TextStyle(
                       color: SiskaraTheme.error,
                       fontSize: 11,
@@ -1500,13 +1493,13 @@ String _displayValue(dynamic value) {
 
 String _answerLabel(String value) {
   const labels = {
-    'layak': 'Layak',
-    'tidak_layak': 'Tidak Layak',
+    'layak': 'Memenuhi Syarat',
+    'memenuhi_syarat': 'Memenuhi Syarat',
+    'tidak_layak': 'Tidak Memenuhi Syarat',
+    'tidak_memenuhi_syarat': 'Tidak Memenuhi Syarat',
     'dilaporkan': 'Foto Dilaporkan',
     'foto_diambil': 'Foto Dilaporkan',
-    'menunggu_penilaian': 'Menunggu Penilaian Staf',
-    'memenuhi_syarat': 'Memenuhi syarat',
-    'tidak_memenuhi_syarat': 'Tidak memenuhi',
+    'menunggu_penilaian': 'Menunggu Penilaian Staf BBKK',
     'tidak_tampak_tanda': 'Tidak tampak tanda',
     'tampak_tanda': 'Tampak tanda',
     'baik': 'Baik',
