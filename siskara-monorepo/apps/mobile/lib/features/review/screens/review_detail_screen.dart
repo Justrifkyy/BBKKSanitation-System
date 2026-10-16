@@ -438,47 +438,6 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
               final review = snapshot.data;
               if (review == null) return const SizedBox.shrink();
 
-              // When finalized (ACC), anyone viewing can download the certificate
-              if (review.submission.status == 'final') {
-                return SafeArea(
-                  top: false,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      border: const Border(
-                        top: BorderSide(color: SiskaraTheme.divider),
-                      ),
-                    ),
-                    child: FilledButton.icon(
-                      onPressed: _isDownloadingCertificate
-                          ? null
-                          : () => _downloadCertificate(review),
-                      icon: _isDownloadingCertificate
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.picture_as_pdf_outlined, size: 20),
-                      label: Text(
-                        _isDownloadingCertificate
-                            ? 'Menyiapkan Surat PDF...'
-                            : 'Unduh Surat Kelayakan Sanitasi (A4)',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F766E),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
-                );
-              }
-
               if (widget.readOnly || !isStaff) {
                 return const SizedBox.shrink();
               }
