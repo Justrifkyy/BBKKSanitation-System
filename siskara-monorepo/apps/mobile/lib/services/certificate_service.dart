@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -36,10 +35,24 @@ class CertificateService {
 
     final isKapal = submission.isKapal;
     final now = verifiedAt ?? submission.updatedAt;
-    final dateFormat = DateFormat('dd MMMM yyyy', 'id_ID');
-    final timeFormat = DateFormat('HH:mm', 'id_ID');
-    final tanggalStr = dateFormat.format(now);
-    final waktuStr = timeFormat.format(now);
+    const bulanIndo = [
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    final tanggalStr = '${now.day} ${bulanIndo[now.month]} ${now.year}';
+    final waktuStr =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
     final docNumber = isKapal
         ? 'BBKK.MKS/PHQC/${submission.id.length >= 8 ? submission.id.substring(0, 8).toUpperCase() : submission.id.toUpperCase()}/${now.year}'
@@ -198,15 +211,87 @@ class CertificateService {
                 },
                 children: [
                   if (isKapal) ...[
-                    _buildTableRow('Nama Kapal', namaSarana, 'Tanda Panggilan / IMO', dataUmum['tanda_panggilan']?.toString() ?? '-'),
-                    _buildTableRow('Bendera / Kebangsaan', dataUmum['kebangsaan_bendera']?.toString() ?? '-', 'Pelabuhan Asal', dataUmum['pelabuhan_asal']?.toString() ?? '-'),
-                    _buildTableRow('Pelabuhan Tujuan', dataUmum['pelabuhan_tujuan']?.toString() ?? '-', 'Jumlah ABK / Penumpang', '${dataUmum['jumlah_abk'] ?? '-'} ABK / ${dataUmum['jumlah_penumpang'] ?? '0'} Pnp'),
-                    _buildTableRow('Nahkoda / Pemohon', pengisiNama ?? 'Deklaran Terdaftar', 'Petugas Verifikator', verifikatorNama ?? 'Staf Sanitasi BBKK'),
+                    _buildTableRow(
+                      'Nama Kapal',
+                      namaSarana,
+                      'Jenis Kapal',
+                      dataUmum['jenis_kapal']?.toString() ?? '-',
+                    ),
+                    _buildTableRow(
+                      'Nomor IMO',
+                      dataUmum['nomor_imo']?.toString() ??
+                          dataUmum['tanda_panggilan']?.toString() ??
+                          '-',
+                      'Bendera Kebangsaan',
+                      dataUmum['bendera']?.toString() ??
+                          dataUmum['kebangsaan_bendera']?.toString() ??
+                          '-',
+                    ),
+                    _buildTableRow(
+                      'Tonase Kotor (GRT)',
+                      dataUmum['besar_kapal_grt'] != null
+                          ? '${dataUmum['besar_kapal_grt']} GRT'
+                          : '-',
+                      'Pelabuhan Asal',
+                      dataUmum['pelabuhan_asal']?.toString() ?? '-',
+                    ),
+                    _buildTableRow(
+                      'Pelabuhan Tujuan',
+                      dataUmum['tujuan_pelabuhan_berikutnya']?.toString() ??
+                          dataUmum['pelabuhan_tujuan']?.toString() ??
+                          '-',
+                      'Lokasi Sandar / Labuh',
+                      dataUmum['lokasi_sandar']?.toString() ?? '-',
+                    ),
+                    _buildTableRow(
+                      'Waktu Kedatangan',
+                      dataUmum['tanggal_jam_tiba']?.toString() ?? '-',
+                      'Waktu Keberangkatan',
+                      dataUmum['tanggal_jam_berangkat']?.toString() ?? '-',
+                    ),
+                    _buildTableRow(
+                      'Waktu Pemeriksaan',
+                      dataUmum['diperiksa_tanggal_jam']?.toString() ?? '-',
+                      'Jumlah Awak / Penumpang',
+                      '${dataUmum['jumlah_awak_kapal'] ?? dataUmum['jumlah_abk'] ?? '-'} Awak / ${dataUmum['jumlah_penumpang'] ?? '0'} Pnp',
+                    ),
+                    _buildTableRow(
+                      'Pemilik / Agen Kapal',
+                      dataUmum['nama_pemilik_agen']?.toString() ?? '-',
+                      'Nahkoda / Pemohon',
+                      pengisiNama ?? 'Deklaran Terdaftar',
+                    ),
                   ] else ...[
-                    _buildTableRow('Nomor Penerbangan', namaSarana, 'Tipe Pesawat', dataUmum['tipe_pesawat']?.toString() ?? '-'),
-                    _buildTableRow('Maskapai / Operator', dataUmum['maskapai']?.toString() ?? '-', 'Registrasi Pesawat', dataUmum['tanda_registrasi']?.toString() ?? '-'),
-                    _buildTableRow('Bandara Asal / Tujuan', '${dataUmum['bandara_asal'] ?? '-'} -> ${dataUmum['bandara_tujuan'] ?? '-'}', 'Waktu Kedatangan', dataUmum['waktu_kedatangan']?.toString() ?? '-'),
-                    _buildTableRow('Pilot In Command', pengisiNama ?? 'Deklaran Terdaftar', 'Petugas Verifikator', verifikatorNama ?? 'Staf Sanitasi BBKK'),
+                    _buildTableRow(
+                      'Nomor Penerbangan',
+                      namaSarana,
+                      'Penyelenggara / Maskapai',
+                      dataUmum['pemilik_atau_penyelenggara']?.toString() ??
+                          dataUmum['maskapai']?.toString() ??
+                          '-',
+                    ),
+                    _buildTableRow(
+                      'Tanda Kebangsaan & Reg',
+                      dataUmum['tanda_kebangsaan_dan_pendaftaran']?.toString() ??
+                          dataUmum['tanda_registrasi']?.toString() ??
+                          '-',
+                      'Rute Penerbangan',
+                      '${dataUmum['berangkat_dari'] ?? dataUmum['bandara_asal'] ?? '-'} -> ${dataUmum['tujuan'] ?? dataUmum['bandara_tujuan'] ?? '-'}',
+                    ),
+                    _buildTableRow(
+                      'Waktu Penerbangan',
+                      dataUmum['tanggal_jam']?.toString() ??
+                          dataUmum['waktu_kedatangan']?.toString() ??
+                          '-',
+                      'Pilot In Command',
+                      pengisiNama ?? 'Deklaran Terdaftar',
+                    ),
+                    _buildTableRow(
+                      'Petugas Validasi BBKK',
+                      verifikatorNama ?? 'Staf Sanitasi BBKK',
+                      'Status Dokumen',
+                      'DITERBITKAN RESMI',
+                    ),
                   ],
                 ],
               ),
@@ -402,31 +487,50 @@ class CertificateService {
 
     Directory? saveDir;
     if (Platform.isAndroid) {
-      saveDir = Directory('/storage/emulated/0/Download');
-      if (!await saveDir.exists()) {
-        saveDir = await getExternalStorageDirectory();
-      }
-    } else {
-      saveDir = await getApplicationDocumentsDirectory();
+      try {
+        final dirs = await getExternalStorageDirectories(
+          type: StorageDirectory.downloads,
+        );
+        if (dirs != null && dirs.isNotEmpty) {
+          saveDir = dirs.first;
+        }
+      } catch (_) {}
+      saveDir ??= await getExternalStorageDirectory();
+    }
+    saveDir ??= await getApplicationDocumentsDirectory();
+
+    if (!await saveDir.exists()) {
+      await saveDir.create(recursive: true);
     }
 
-    if (saveDir == null) {
-      throw const FileSystemException('Folder penyimpanan tidak ditemukan pada perangkat.');
-    }
-
-    final idShort = submission.id.length >= 8 ? submission.id.substring(0, 8).toUpperCase() : submission.id.toUpperCase();
+    final idShort = submission.id.length >= 8
+        ? submission.id.substring(0, 8).toUpperCase()
+        : submission.id.toUpperCase();
     final fileName = submission.isKapal
         ? 'SURAT_SANITASI_KAPAL_BBKK_$idShort.pdf'
         : 'SURAT_SANITASI_PESAWAT_BBKK_$idShort.pdf';
 
     final file = File('${saveDir.path}/$fileName');
-    await file.writeAsBytes(pdfBytes);
+    await file.writeAsBytes(pdfBytes, flush: true);
+
+    // Try also copying to public Download directory if accessible on device
+    if (Platform.isAndroid) {
+      try {
+        final publicDownloadDir = Directory('/storage/emulated/0/Download');
+        if (await publicDownloadDir.exists()) {
+          final publicFile = File('${publicDownloadDir.path}/$fileName');
+          await publicFile.writeAsBytes(pdfBytes, flush: true);
+        }
+      } catch (_) {
+        // Scoped storage may restrict direct write, file in saveDir is safe
+      }
+    }
 
     // Automatically open with device PDF viewer
     try {
       await OpenFilex.open(file.path);
     } catch (_) {
-      // If no default viewer, file is still saved successfully in Downloads
+      // If no default viewer, file is still saved successfully
     }
 
     return file;

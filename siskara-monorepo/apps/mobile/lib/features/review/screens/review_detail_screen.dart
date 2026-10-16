@@ -57,11 +57,14 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
           duration: const Duration(seconds: 4),
         ),
       );
-    } catch (error) {
+    } catch (error, stack) {
+      debugPrint('Certificate download error: $error\n$stack');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal membuat surat: ${ErrorMessage.from(error)}'),
+          content: Text(
+            'Gagal membuat surat: ${error is Exception ? error.toString().replaceFirst("Exception: ", "") : ErrorMessage.from(error)}',
+          ),
           backgroundColor: SiskaraTheme.error,
         ),
       );
