@@ -79,57 +79,58 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
   }
 
   static const _shipFields = <_GeneralField>[
-    _GeneralField('nama_kapal', 'Nama kapal', fullWidth: true),
-    _GeneralField('jenis_kapal', 'Jenis kapal', fullWidth: true),
-    _GeneralField('besar_kapal_grt', 'Besar kapal (GRT)', numeric: true, fullWidth: true),
-    _GeneralField('bendera', 'Bendera', fullWidth: true),
+    _GeneralField('nama_kapal', 'Nama kapal', fullWidth: false),
+    _GeneralField('jenis_kapal', 'Jenis kapal', fullWidth: false),
+    _GeneralField('besar_kapal_grt', 'Besar kapal (GRT)', numeric: true, fullWidth: false),
+    _GeneralField('bendera', 'Bendera', fullWidth: false),
     _GeneralField('nomor_imo', 'Nomor IMO', fullWidth: true),
     _GeneralField('pelabuhan_asal', 'Pelabuhan asal', fullWidth: true),
     _GeneralField(
+      'nama_pemilik_agen',
+      'Nama pemilik / agen',
+      fullWidth: false,
+    ),
+    _GeneralField(
       'tujuan_pelabuhan_berikutnya',
-      'Tujuan pelabuhan berikutnya',
+      'Tujuan pelabuhan',
+      hint: 'Pelabuhan berikutnya',
       required: false,
-      fullWidth: true,
+      fullWidth: false,
+    ),
+    _GeneralField(
+      'tanggal_jam_tiba',
+      'Tgl & jam tiba',
+      hint: 'Kedatangan',
+      dateTime: true,
+      fullWidth: false,
+    ),
+    _GeneralField(
+      'tanggal_jam_berangkat',
+      'Tgl & jam berangkat',
+      required: false,
+      hint: 'Keberangkatan',
+      dateTime: true,
+      fullWidth: false,
+    ),
+    _GeneralField(
+      'diperiksa_tanggal_jam',
+      'Tgl & jam periksa',
+      hint: 'Waktu periksa',
+      dateTime: true,
+      fullWidth: false,
     ),
     _GeneralField(
       'lokasi_sandar',
       'Lokasi sandar',
-      hint: 'Contoh: Dermaga Hatta / Kolam Labuh',
-      fullWidth: true,
-    ),
-    _GeneralField(
-      'nama_pemilik_agen',
-      'Nama pemilik / agen',
-      fullWidth: true,
-    ),
-    _GeneralField(
-      'tanggal_jam_tiba',
-      'Tanggal dan jam tiba',
-      hint: 'Pilih tanggal & jam tiba',
-      dateTime: true,
-      fullWidth: true,
-    ),
-    _GeneralField(
-      'tanggal_jam_berangkat',
-      'Tanggal dan jam berangkat',
-      required: false,
-      hint: 'Pilih tanggal & jam berangkat',
-      dateTime: true,
-      fullWidth: true,
-    ),
-    _GeneralField(
-      'diperiksa_tanggal_jam',
-      'Tanggal dan jam diperiksa',
-      hint: 'Pilih tanggal & jam diperiksa',
-      dateTime: true,
-      fullWidth: true,
+      hint: 'Dermaga / labuh',
+      fullWidth: false,
     ),
     _GeneralField(
       'jumlah_awak_kapal',
       'Jumlah awak kapal',
       numeric: true,
       wholeNumber: true,
-      fullWidth: true,
+      fullWidth: false,
     ),
     _GeneralField(
       'jumlah_penumpang',
@@ -137,27 +138,27 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       required: false,
       numeric: true,
       wholeNumber: true,
-      fullWidth: true,
+      fullWidth: false,
     ),
   ];
 
   static const _aircraftFields = <_GeneralField>[
     _GeneralField('pemilik_atau_penyelenggara', 'Pemilik / penyelenggara', fullWidth: true),
-    _GeneralField('nomor_penerbangan', 'Nomor penerbangan', fullWidth: true),
+    _GeneralField('nomor_penerbangan', 'Nomor penerbangan', fullWidth: false),
     _GeneralField(
       'tanda_kebangsaan_dan_pendaftaran',
-      'Tanda kebangsaan dan pendaftaran',
-      fullWidth: true,
+      'Tanda kebangsaan / reg',
+      fullWidth: false,
     ),
     _GeneralField(
       'tanggal_jam',
-      'Tanggal dan jam penerbangan',
-      hint: 'Pilih tanggal & jam penerbangan',
+      'Tgl & jam penerbangan',
+      hint: 'Waktu penerbangan',
       dateTime: true,
       fullWidth: true,
     ),
-    _GeneralField('berangkat_dari', 'Berangkat dari', fullWidth: true),
-    _GeneralField('tujuan', 'Tujuan', fullWidth: true),
+    _GeneralField('berangkat_dari', 'Berangkat dari', fullWidth: false),
+    _GeneralField('tujuan', 'Tujuan', fullWidth: false),
   ];
 
   TextEditingController _controller(String key) =>
@@ -1250,17 +1251,22 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
       onTap: field.dateTime ? () => _selectDateTime(field) : null,
       decoration: InputDecoration(
         isDense: true,
+        constraints: const BoxConstraints(minHeight: 48),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
+          horizontal: 13,
+          vertical: 14,
         ),
         labelText: '${field.label}${field.required ? ' *' : ''}',
         hintText: field.hint,
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-        hintStyle: const TextStyle(fontSize: 13, color: SiskaraTheme.textSecondary),
+        labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+        hintStyle: const TextStyle(fontSize: 12, color: SiskaraTheme.textSecondary),
         suffixIcon: field.dateTime
             ? const Icon(Icons.calendar_month_outlined, size: 18)
             : null,
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 38,
+          minHeight: 38,
+        ),
       ),
       validator: (value) {
         if (field.required && (value == null || value.trim().isEmpty)) {
@@ -1348,12 +1354,12 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
                 title: 'Rute & pemeriksaan',
                 fieldNames: [
                   'pelabuhan_asal',
-                  'tujuan_pelabuhan_berikutnya',
-                  'lokasi_sandar',
                   'nama_pemilik_agen',
+                  'tujuan_pelabuhan_berikutnya',
                   'tanggal_jam_tiba',
                   'tanggal_jam_berangkat',
                   'diperiksa_tanggal_jam',
+                  'lokasi_sandar',
                 ],
               ),
               _GeneralFieldGroup(
@@ -1803,18 +1809,17 @@ class _GeneralFieldGroupCard extends StatelessWidget {
           const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) {
-              const gap = 12.0;
+              const gap = 10.0;
               final compactWidth = (constraints.maxWidth - gap) / 2;
-              final isWide = constraints.maxWidth > 580;
               return Wrap(
                 spacing: gap,
                 runSpacing: 10,
                 children: [
                   for (final field in fields)
                     SizedBox(
-                      width: isWide && !(field.fullWidth ?? false)
-                          ? compactWidth
-                          : constraints.maxWidth,
+                      width: (field.fullWidth ?? false)
+                          ? constraints.maxWidth
+                          : compactWidth,
                       child: buildField(field),
                     ),
                 ],
